@@ -1,0 +1,63 @@
+##########################################
+# Program detects 3' ends of transcripts #
+##########################################
+
+
+########################################
+# Destination of FASTQ.GZ files.       #
+# Should be .fq.gz or .fastq.gz files. #
+########################################
+
+input_dir: ./testing_data
+tmp_dir: tmp
+output_dir: output
+scratch: tmp
+
+###################
+# Fastqc options. #
+###################
+
+kmer_size: 5   # [5]
+
+############
+# Trimming #
+############
+
+trimming: adapterremoval  # [adapterremoval | empty]
+for_adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA  # [AGATCGGAAGAGCACACGTCTGAACTCCAGTCA]
+rev_adapter: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT  # [AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT]
+min_read_length: 20                             # [20]
+max_read_length: 700                            # [700]
+trim_from_3end: 0 #AdapterRemoval, proramatically shorten reads, default 0
+quality_limit: 25                               # [25]
+maximum_n_count_in_reads: 1                     # [1]
+max_errors: 0.1                                 # [0.1]
+
+###############
+# Subsampling #
+###############
+
+subsample_to: 100000
+
+#########################
+# CPU and memory params #
+#########################
+
+threads: 4
+memory: 8
+memory_java: 8
+threads_star: 8
+threads_julia: 6
+threads_flash: 8
+
+
+##############
+# References #
+##############
+
+ercc_fasta: datasets/additional_data_RNA_seq/ERCC92.fa
+bbmap_ref: datasets/bbmap/two_short_plus_ercc.fa
+polyA_ref: datasets/bbmap/polyA.fa
+reference_dna: /media/root/ocean/Databases/hg19/Encode_annotation/genome.fa
+reference_gtf: /media/root/ocean/Databases/hg19/Encode_annotation/gencode.v19.annotation.gtf
+reference_for_subset: #datasets/additional_data_RNA_seq/ERCC92_withou_polyA.fa

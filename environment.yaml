@@ -1,0 +1,9 @@
+# TODO: add all programs needed.
+
+channels:
+ - r
+ - bioconda
+ - conda-forge
+ - defaults
+dependencies:
+ - r
