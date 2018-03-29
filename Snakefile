@@ -172,9 +172,9 @@ if config["trimming"] == "adapterremoval":
 
 else:
     rule rename:
-    input: input_dir + "/{stem}.fastq.gz"
-    output: "{tmp_dir}/{stem}_Trimmed.fastq.gz"
-    shell: "cp -S {input[0]} {output[0]}"
+        input: input_dir + "/{stem}.fastq.gz"
+        output: "{tmp_dir}/{stem}_Trimmed.fastq.gz"
+        shell: "cp -S {input[0]} {output[0]}"
 
 
 # ------------------------------ Subsampling --------------------------- #
