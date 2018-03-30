@@ -13,7 +13,9 @@ module PolyAanalysis
 
 export
     trim_polyA_file_records,
-    trim_polyA_from_fastq_record
+    trim_polyA_from_fastq_record,
+    get_polyA_prefixes,
+    get_polyA_prefixes_from_file
 
 using BioSequences
 
@@ -124,5 +126,88 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
         return(fq,has_proper_polyA)
     end
 end
+
+"""
+returns minimum kmer streches of not polyA ins a supplied transcript sequences
+Arguments:
+    sequence - string with polyA streches (type - BioSequences reference seq)
+    minimum_not_polyA - minimum length of not polyA strech
+    minimum_polyA_length - minimum length of polyA strech
+    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
+    minimum_distance_from_non_poly_A - minimum number of any not polyA symbol in polyA strech from the non polyA
+"""
+function get_polyA_prefixes(sequence::BioSequences.ReferenceSequence,
+    minimum_not_polyA::Int64,
+    minimum_polyA_length::Int64,
+    maximum_non_A_symbols::Int64,
+    minimum_distance_from_non_poly_A::Int64)::Array{String,1}
+    output=Array{String,1}()
+    if maximum_non_A_symbols < 6 #beaks - not universal
+        re=BioSequences.RE.Regex{DNA}("[ATGC]{$(minimum_not_polyA-1)}[TGC]A+[ATGC]A+[ATGC]A+[ATGC]A+[ATGC]A+")
+    else
+        error("Not posiible this value of errors")
+    end
+
+    for m in matchall(re, BioSequence{DNAAlphabet{4}}(sequence), false)
+        polyA_part=m[minimum_not_polyA+1:end]
+        polyA_length=length(polyA_part)
+        println(m, " all fragment")
+        println(polyA_part, " polyA_part")
+        println(polyA_length," ",minimum_polyA_length)
+
+        println("-----------------")
+        #check if passes length requirement
+        if polyA_length >= minimum_polyA_length
+            #check if polyA mismatches are within limits
+            println((composition(polyA_part[1:minimum_polyA_length])[DNA_A] - minimum_polyA_length))
+            if (composition(polyA_part[1:minimum_polyA_length])[DNA_A] - minimum_polyA_length) <= maximum_non_A_symbols
+                push!(output,m[1:minimum_not_polyA])
+            end
+        end
+
+    end
+    return(output)
+end
+
+
+"""
+returns minimum kmer streches of not polyA ins a supplied transcript sequences from a file
+Arguments:
+    sequence - string with polyA streches (type - BioSequences reference seq)
+    minimum_not_polyA - minimum length of not polyA strech
+    minimum_polyA_length - minimum length of polyA strech
+    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
+    minimum_distance_from_non_poly_A - minimum number of any not polyA symbol in polyA strech from the non polyA
+"""
+function get_polyA_prefixes_from_file(file::String,
+    minimum_not_polyA::Int64,
+    minimum_polyA_length::Int64,
+    maximum_non_A_symbols::Int64,
+    minimum_distance_from_non_poly_A::Int64)::Array{String,1}
+    output=Array{String,1}()
+    reader = FASTA.Reader(open(file, "r"))
+    for record in reader
+        rec_seq=ReferenceSequence(sequence(record))
+        prefixes=get_polyA_prefixes(rec_seq,
+        minimum_not_polyA,
+        minimum_polyA_length,
+        maximum_non_A_symbols,
+        minimum_distance_from_non_poly_A)
+        if length(prefixes) > 0
+            println(FASTA.identifier(record))
+            println(prefixes)
+            println(FASTA.sequence(record))
+            exit()
+        end
+    end
+
+    close(reader)
+
+    exit()
+
+    return(output)
+end
+
+
 
 end #module PolyAanalysis
