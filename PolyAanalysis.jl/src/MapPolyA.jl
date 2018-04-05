@@ -85,9 +85,9 @@ end
 "Parse GFF file end extracts all exonic intervals from a gene - key of the returned dictionary - gene id"
 function ParseGFF3(gff3file::String)::Dict{String,IntervalCollection{Bio.Intervals.GFF3.Record}}
     genes = Dict{String,IntervalCollection{Bio.Intervals.GFF3.Record}}()
-    #collect all exonic intervals of a gene
     id = ""
     geneid = ""
+    astr = GetAttributes(gff3file)
 
     for record in open(GFF3.Reader, gff3file)
         id = GFF3.attributes(record,"ID")[1]
@@ -105,6 +105,28 @@ function ParseGFF3(gff3file::String)::Dict{String,IntervalCollection{Bio.Interva
     return genes
 end
 
+
+function GetAttributes(gff3file::String)
+
+    ct = Int16(0)
+    s = Array{String,1}()
+
+    for record in open(GFF3.Reader, gff3file)
+        while ct < 10000
+
+            for i in GFF3.attributes(record)
+                if first(i) in s
+                    continue
+                else
+                    push!(s, first(i))
+                end
+            end
+            ct += 1
+        end
+    end
+
+    return s
+end
 
 
 function main(args)
@@ -140,9 +162,6 @@ function main(args)
         statdframe[:PolyAReads] = pareads
         WrFrame(parsed_args["outfile"]*".csv", statdframe)
         genes = ParseGFF3(parsed_args["gff3file"])
-        for k in keys(genes)
-            println(genes[k])
-        end
     end
 end
 
