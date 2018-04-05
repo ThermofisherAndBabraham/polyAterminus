@@ -87,13 +87,30 @@ function ParseGFF3(gff3file::String)::Dict{String,IntervalCollection{Bio.Interva
     genes = Dict{String,IntervalCollection{Bio.Intervals.GFF3.Record}}()
     id = ""
     geneid = ""
-    astr = GetAttributes(gff3file)
+    attr = GetAttributes(gff3file)
+    geneatr = ""
+    gpatr = ""
+
+    for i in attr
+        if match(r"gene.i|Id|D", i) !== nothing
+            geneatr = i
+        end
+
+        if match(r"P|parent", i) !== nothing
+            gpatr = i
+        end
+    end
+
+    if geneatr == "" || gpatr == ""
+        println("Gene ID or Parent was not found in gff3 attributes, recomendation is to download gff3 from: https://www.gencodegenes.org/releases")
+        exit(1)
+    end
 
     for record in open(GFF3.Reader, gff3file)
-        id = GFF3.attributes(record,"ID")[1]
-        geneid = GFF3.attributes(record,"gene_id")[1]
+        id = GFF3.attributes(record, "ID")[1]
+        geneid = GFF3.attributes(record, geneatr)[1]
 
-        if  (GFF3.featuretype(record) == "exon" && String[id] in GFF3.attributes(record, "Parent"))
+        if  (GFF3.featuretype(record) == "exon" && String[id] in GFF3.attributes(record, gpatr))
             if !(geneid in keys(genes))
                 genes[geneid] = IntervalCollection{Bio.Intervals.GFF3.Record}()
             end
@@ -108,20 +125,15 @@ end
 
 function GetAttributes(gff3file::String)
 
-    ct = Int16(0)
     s = Array{String,1}()
 
     for record in open(GFF3.Reader, gff3file)
-        while ct < 10000
-
-            for i in GFF3.attributes(record)
-                if first(i) in s
-                    continue
-                else
-                    push!(s, first(i))
-                end
+        for i in GFF3.attributes(record)
+            if first(i) in s
+                continue
+            else
+                push!(s, first(i))
             end
-            ct += 1
         end
     end
 
@@ -160,6 +172,7 @@ function main(args)
         statdframe[:TotalReads] = treads
         statdframe[:PassedReads] = passreads
         statdframe[:PolyAReads] = pareads
+        println(statdframe)
         WrFrame(parsed_args["outfile"]*".csv", statdframe)
         genes = ParseGFF3(parsed_args["gff3file"])
     end
