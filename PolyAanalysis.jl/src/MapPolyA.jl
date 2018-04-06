@@ -31,11 +31,19 @@ function BamRead(bam::String)
         if (flag&4 == 0) && (flag&256 == 0) && (flag&2048 == 0)  # filter out only mapped and primary alignments
             spl = split(seqname(record),":")
 
+            if flag&16 == 0
+                strness = "+"
+            elseif flag&16 == 16
+                strness = "-"
+            else
+                strness = "."
+            end
+
             if spl[2] == "A"
                 pareads += 1
                 rpos = rightposition(record)
-                chrpos = rfname * "::" * string(rpos)
-                pclus = PolAClus(pclus, chrpos, parse(Int16, spl[1]))
+                cps = rfname * "::" * string(rpos) * "::" * strness
+                pclus = PolAClus(pclus, cps, parse(Int16, spl[1]))
             end
             passreads += 1
         end
@@ -59,14 +67,14 @@ end
 
 
 function PolACalculus(d::Dict{String,Array{Int16,1}})
-    dframe = DataFrame(Chrmosome=String[], Position=Int32[], Median=Float16[], Minimum=Int16[], Maximum=Int16[], Counts=Int32[])
+    dframe = DataFrame(Chrmosome=String[], Position=Int32[], Strand=String[], Median=Float16[], Minimum=Int16[], Maximum=Int16[], Counts=Int32[])
 
     for k in keys(d)
         md = median(d[k])
         mn = minimum(d[k])
         mx = maximum(d[k])
         l = length(d[k])
-        push!(dframe, [split(k,"::")[1] parse(Int32,split(k,"::")[2]) md mn mx l])
+        push!(dframe, [split(k,"::")[1] parse(Int32,split(k,"::")[2]) split(k,"::")[3] md mn mx l])
     end
 
     return dframe
@@ -82,44 +90,40 @@ function WrFrame(fname::String, data::DataFrame)
 end
 
 
-"Parse GFF file end extracts all exonic intervals from a gene - key of the returned dictionary - gene id"
-function ParseGFF3(gff3file::String)::Dict{String,IntervalCollection{Bio.Intervals.GFF3.Record}}
-    genes = Dict{String,IntervalCollection{Bio.Intervals.GFF3.Record}}()
-    id = ""
-    geneid = ""
-    attr = GetAttributes(gff3file)
-    geneatr = ""
-    gpatr = ""
+function ParseGFF3(gff3file::String)
+    gffcol = IntervalCollection{Bio.Intervals.GFF3.Record}()
+    # id = ""
+    # geneid = ""
+    # tic()
+    # # attr = GetAttributes(gff3file)
+    # toc()
+    # geneatr = ""
+    # gpatr = ""
+    #
+    # for i in attr
+    #     if match(r"gene.i|Id|D", i) !== nothing
+    #         geneatr = i
+    #     end
+    #
+    #     if match(r"P|parent", i) !== nothing
+    #         gpatr = i
+    #     end
+    # end
 
-    for i in attr
-        if match(r"gene.i|Id|D", i) !== nothing
-            geneatr = i
-        end
-
-        if match(r"P|parent", i) !== nothing
-            gpatr = i
-        end
-    end
-
-    if geneatr == "" || gpatr == ""
-        println("Gene ID or Parent was not found in gff3 attributes, recomendation is to download gff3 from: https://www.gencodegenes.org/releases")
-        exit(1)
-    end
+    # println(attr)
+    #
+    # if geneatr == "" || gpatr == ""
+    #     println("Gene ID or Parent was not found in gff3 attributes, recomendation is to download gff3 from: https://www.gencodegenes.org/releases")
+    #     exit(1)
+    # end
 
     for record in open(GFF3.Reader, gff3file)
         id = GFF3.attributes(record, "ID")[1]
-        geneid = GFF3.attributes(record, geneatr)[1]
-
-        if  (GFF3.featuretype(record) == "exon" && String[id] in GFF3.attributes(record, gpatr))
-            if !(geneid in keys(genes))
-                genes[geneid] = IntervalCollection{Bio.Intervals.GFF3.Record}()
-            end
-
-            push!(genes[geneid], Interval(record))
-        end
+        geneid = GFF3.attributes(record, "gene_id")[1]
+        push!(gffcol, Interval(record))
     end
 
-    return genes
+    return gffcol
 end
 
 
@@ -138,6 +142,43 @@ function GetAttributes(gff3file::String)
     end
 
     return s
+end
+
+
+function GetIntervalSet(dframe::DataFrame)
+    intcol = IntervalCollection{String}()
+    for i in eachrow(dframe)
+        if i[3] == "+"
+            s = Strand('+')
+        elseif i[3] == '-'
+            s = Strand('-')
+        elseif i[3] == '.'
+            s = Strand('.')
+        else
+            s = Strand('?')
+        end
+
+        push!(intcol, Interval(i[1], i[2], i[2], s,
+              string([4])*","*string(i[5])*","*string(i[6])*","*string(i[7])))
+    end
+
+    return intcol
+end
+
+
+function IntersectCollections(a::IntervalCollection, b::IntervalCollection)
+
+    overlaps = Dict{String,Array{String,1}}()
+
+    for x in a, y in b
+        if isoverlapping(x, y)
+
+            println(x)
+            println(y)
+            exit()
+        end
+    end
+
 end
 
 
@@ -168,13 +209,17 @@ function main(args)
     for bam in parsed_args["bams"]
         treads, passreads, pareads, pclus = BamRead(bam)
         statdframe = PolACalculus(pclus)
-        statdframe[:Smaple] = bam
+        statdframe[:Smaple] = basename(bam)
         statdframe[:TotalReads] = treads
         statdframe[:PassedReads] = passreads
         statdframe[:PolyAReads] = pareads
-        println(statdframe)
+        # println(statdframe)
         WrFrame(parsed_args["outfile"]*".csv", statdframe)
-        genes = ParseGFF3(parsed_args["gff3file"])
+        intervalcolection = GetIntervalSet(statdframe)
+        gffcollection = ParseGFF3(parsed_args["gff3file"])
+        IntersectCollections(intervalcolection, gffcollection)
+        # genes = ParseGFF3(parsed_args["gff3file"])
+
     end
 end
 
