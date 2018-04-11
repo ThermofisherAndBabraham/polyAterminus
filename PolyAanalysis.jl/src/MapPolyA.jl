@@ -9,10 +9,7 @@ using DataStructures
 using CSV
 using Bio.Intervals
 
-"""
-"Turi buti: PolyA parsing is read name -> clustering -> statistics -> gtf, arba bed."
-"Count total reads, aligned reads in intervals and general coverage."
-"""
+
 function BamRead(bam::String)
 
     reader = open(Bio.Align.BAMReader, bam)
@@ -28,7 +25,7 @@ function BamRead(bam::String)
         flag = Bio.Align.flag(record)
         treads += 1
 
-        if (flag&4 == 0) && (flag&256 == 0) && (flag&2048 == 0)  # filter out only mapped and primary alignments
+        if (flag&4 == 0) && (flag&256 == 0) && (flag&2048 == 0)
             spl = split(seqname(record),":")
 
             if flag&16 == 0
@@ -43,7 +40,7 @@ function BamRead(bam::String)
                 pareads += 1
                 rpos = rightposition(record)
                 cps = rfname * "::" * string(rpos) * "::" * strness
-                pclus = PolAClus(pclus, cps, parse(Int16, spl[1]))
+                pclus = Clust(pclus, cps, parse(Int16, spl[1]))
             end
             passreads += 1
         end
@@ -53,7 +50,7 @@ function BamRead(bam::String)
 end
 
 
-function PolAClus(d::Dict{String,Array{Int16,1}}, p::String, l::Int16)
+function Clust(d::Dict, p::Any, l::Any)::Dict
 
     if haskey(d, p)
         v = d[p]
@@ -66,7 +63,7 @@ function PolAClus(d::Dict{String,Array{Int16,1}}, p::String, l::Int16)
 end
 
 
-function PolACalculus(d::Dict{String,Array{Int16,1}})
+function PolACalculus(d::Dict{String,Array{Int16,1}})::DataFrame
     dframe = DataFrame(Chrmosome=String[], Position=Int32[], Strand=String[], Median=Float16[], Minimum=Int16[], Maximum=Int16[], Counts=Int32[])
 
     for k in keys(d)
@@ -81,72 +78,124 @@ function PolACalculus(d::Dict{String,Array{Int16,1}})
 end
 
 
-function WrFrame(fname::String, data::DataFrame)
+function WrFrame(fname::String, data::DataFrame, delim::Char)
     if !isfile(fname)
-        CSV.write(fname, data)
+        CSV.write(fname, data, delim=delim)
     else
-        CSV.write(fname, data, append=true, header=false)
+        CSV.write(fname, data, delim=delim, append=true, header=false)
     end
 end
 
 
-function ParseGFF3(gff3file::String)
-    gffcol = IntervalCollection{Bio.Intervals.GFF3.Record}()
-    # id = ""
-    # geneid = ""
-    # tic()
-    # # attr = GetAttributes(gff3file)
-    # toc()
-    # geneatr = ""
-    # gpatr = ""
-    #
-    # for i in attr
-    #     if match(r"gene.i|Id|D", i) !== nothing
-    #         geneatr = i
-    #     end
-    #
-    #     if match(r"P|parent", i) !== nothing
-    #         gpatr = i
-    #     end
-    # end
-
-    # println(attr)
-    #
-    # if geneatr == "" || gpatr == ""
-    #     println("Gene ID or Parent was not found in gff3 attributes, recomendation is to download gff3 from: https://www.gencodegenes.org/releases")
-    #     exit(1)
-    # end
+function ParseGFF3(gff3file::String)::IntervalCollection{String}
+    intcol = IntervalCollection{String}()
 
     for record in open(GFF3.Reader, gff3file)
-        id = GFF3.attributes(record, "ID")[1]
-        geneid = GFF3.attributes(record, "gene_id")[1]
-        push!(gffcol, Interval(record))
+        chr::String = GFF3.seqid(record)
+        start::Int = GFF3.seqstart(record)
+        seqend::Int = GFF3.seqend(record)
+        strand::Bio.Intervals.Strand = GFF3.strand(record)
+
+        mdstr = ParseRecord(record)
+        push!(intcol, Interval(chr, start, seqend, strand, mdstr))
     end
 
-    return gffcol
+    return intcol
 end
 
 
-function GetAttributes(gff3file::String)
+function ParseRecord(r::GFF3.Record)::String
 
-    s = Array{String,1}()
+    md::String = ""
 
-    for record in open(GFF3.Reader, gff3file)
-        for i in GFF3.attributes(record)
-            if first(i) in s
-                continue
+    try s = GFF3.attributes(r, "ID")
+        md = string(md,"ID=")
+        for x in s
+            if x == s[end]
+                md = string(md,x)
             else
-                push!(s, first(i))
+                md = string(md,x,",")
             end
         end
+        md = string(md,";")
+    catch   md = string(md,"ID=;")
     end
 
-    return s
+    try s = GFF3.attributes(r, "Parent")
+        md = string(md,"Parent=")
+        for x in s
+            if x == s[end]
+                md = string(md,x)
+            else
+                md = string(md,x,",")
+            end
+        end
+        md = string(md,";")
+    catch   md = string(md,"Parent=;")
+    end
+
+    try s = GFF3.attributes(r, "gene_id")
+        md = string(md,"gene_id=")
+        for x in s
+            if x == s[end]
+                md = string(md,x)
+            else
+                md = string(md,x,",")
+            end
+        end
+        md = string(md,";")
+    catch   md = string(md,"gene_id=;")
+    end
+
+    try s = GFF3.attributes(r, "transcript_id")
+        md = string(md,"transcript_id=")
+        for x in s
+            if x == s[end]
+                md = string(md,x)
+            else
+                md = string(md,x,",")
+            end
+        end
+        md = string(md,";")
+    catch   md = string(md,"transcript_id=;")
+    end
+
+    try s = GFF3.attributes(r, "gene_type")
+        md = string(md,"gene_type=")
+        for x in s
+            if x == s[end]
+                md = string(md,x)
+            else
+                md = string(md,x,",")
+            end
+        end
+        md = string(md,";")
+    catch   md = string(md,"gene_type=;")
+    end
+
+    try s = GFF3.attributes(r, "gene_name")
+        md = string(md,"gene_name=")
+        for x in s
+            if x == s[end]
+                md = string(md,x)
+            else
+                md = string(md,x,",")
+            end
+        end
+        md = string(md,";")
+    catch   md = string(md,"gene_name=;")
+    end
+
+    md = string(md,"ftype=",GFF3.featuretype(r))
+
+    return md
 end
 
 
-function GetIntervalSet(dframe::DataFrame)
+function GetIntervalSet(dframe::DataFrame)::IntervalCollection{String}
+
     intcol = IntervalCollection{String}()
+
     for i in eachrow(dframe)
         if i[3] == "+"
             s = Strand('+')
@@ -159,28 +208,118 @@ function GetIntervalSet(dframe::DataFrame)
         end
 
         push!(intcol, Interval(i[1], i[2], i[2], s,
-              string([4])*","*string(i[5])*","*string(i[6])*","*string(i[7])))
+              "Median="*string(i[4])*";"*"Min="*string(i[5])*
+              ";"*"Max="*string(i[6])*";"*"Counts="*string(i[7])))
     end
 
     return intcol
 end
 
 
-function IntersectCollections(a::IntervalCollection, b::IntervalCollection)
+function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFrame
 
-    overlaps = Dict{String,Array{String,1}}()
+    dfp = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
+    dfn = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
     for x in a, y in b
         if isoverlapping(x, y)
-
-            println(x)
-            println(y)
-            exit()
+            if strand(x) == strand(y)
+                geneID = split(split(metadata(y),";")[3],"=")[2]
+                gn = split(split(metadata(y),";")[6],"=")[2]
+                c = parse(Int32,split(split(metadata(x),";")[4],"=")[2])
+                str = string(strand(x))
+                ft = split(split(metadata(y),";")[7],"=")[2]
+                me = parse(Float32,split(split(metadata(x),";")[1],"=")[2])
+                mi = parse(Int16,split(split(metadata(x),";")[2],"=")[2])
+                mx = parse(Int16,split(split(metadata(x),";")[3],"=")[2])
+                bt = split(split(metadata(y),";")[5],"=")[2]
+                if strand(x) == Strand('-')
+                    push!(dfn, [seqname(x) first(x) last(x) gn c str ft me mi mx bt])
+                else
+                    push!(dfp, [seqname(x) first(x) last(x) gn c str ft me mi mx bt])
+                end
+            end
         end
     end
 
+    sort!(dfn, rev=true, cols = [:Start, :End, :Name])
+    sort!(dfp, cols = [:Start, :End, :Name])
+
+    dfp = rmdups!(dfp)
+    dfn = rmdups!(dfn)
+
+    ct = Int64(0)
+    l = size(dfn)[1]
+
+    for (i, x) in enumerate(eachrow(dfn))
+        ct += 1
+        if i+1 <= l
+            if x[4] == eachrow(dfn)[i+1][4]
+                x[4] = x[4]*".$ct"
+            else
+                x[4] = x[4]*".$ct"
+                ct = 0
+            end
+        else
+            x[4] = x[4]*".$ct"
+            ct = 0
+        end
+    end
+
+    ct = Int64(0)
+    l = size(dfp)[1]
+
+    for (i, x) in enumerate(eachrow(dfp))
+        ct += 1
+        if i+1 <= l
+            if x[4] == eachrow(dfp)[i+1][4]
+                x[4] = x[4]*".$ct"
+            else
+                x[4] = x[4]*".$ct"
+                ct = 0
+            end
+        else
+            x[4] = x[4]*".$ct"
+            ct = 0
+        end
+    end
+
+    df = vcat(dfp, dfn)
+
+    return df
 end
 
+
+function rmdups!(dframe::DataFrame)::DataFrame
+    allrows = eachrow(dframe)
+    ct = Int32(0)
+
+    for (i, x) in enumerate(eachrow(dframe))
+        ct += 1
+        while i+ct <= size(dframe)[1]
+            while i+ct <= size(dframe)[1] && x[1] == allrows[i+ct][1] && x[2] == allrows[i+ct][2] && x[3] == allrows[i+ct][3] && x[4] == allrows[i+ct][4]
+                if x[7] == "stop_codon"
+                    deleterows!(dframe, i+ct)
+                elseif x[7] == "start_codon"
+                    deleterows!(dframe, i+ct)
+                elseif x[7] == "CDS"
+                    deleterows!(dframe, i+ct)
+                elseif x[7] == "exon"
+                    deleterows!(dframe, i+ct)
+                elseif x[7] == "transcript"
+                    deleterows!(dframe, i+ct)
+                elseif x[7] == "gene"
+                    deleterows!(dframe, i+ct)
+                end
+            end
+
+            ct += 1
+        end
+        ct = 0
+    end
+
+    return dframe
+end
 
 function main(args)
     arg_parse_settings = ArgParseSettings(description="Calculates uncovered windows number and GC bias.")
@@ -206,6 +345,8 @@ function main(args)
 
     parsed_args = parse_args(arg_parse_settings)
 
+    gffcollection = ParseGFF3(parsed_args["gff3file"])
+
     for bam in parsed_args["bams"]
         treads, passreads, pareads, pclus = BamRead(bam)
         statdframe = PolACalculus(pclus)
@@ -213,13 +354,10 @@ function main(args)
         statdframe[:TotalReads] = treads
         statdframe[:PassedReads] = passreads
         statdframe[:PolyAReads] = pareads
-        # println(statdframe)
-        WrFrame(parsed_args["outfile"]*".csv", statdframe)
+        WrFrame(parsed_args["outfile"]*"detected_polyA.tsv", statdframe, '\t')
         intervalcolection = GetIntervalSet(statdframe)
-        gffcollection = ParseGFF3(parsed_args["gff3file"])
-        IntersectCollections(intervalcolection, gffcollection)
-        # genes = ParseGFF3(parsed_args["gff3file"])
-
+        joinedcollection = ItsectCollection(intervalcolection, gffcollection)
+        WrFrame(parsed_args["outfile"]*"_mapped_polyA.bed", joinedcollection, '\t')
     end
 end
 
