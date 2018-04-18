@@ -1,3 +1,8 @@
+using BioSequences
+using Base.Test
+push!(LOAD_PATH, "../../")
+using PolyAanalysis
+
 # function trim_polyA_from_fastq_record(fq::FASTQ.Record,
 #     minimum_not_polyA::Int64,
 #     minimum_polyA_length::Int64,

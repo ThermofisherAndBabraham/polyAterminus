@@ -8,7 +8,7 @@
 # Should be .fq.gz or .fastq.gz files. #
 ########################################
 
-input_dir: ./testing_data
+input_dir: /media/root/working_disk1/data_RNA_seqone_sample/
 tmp_dir: tmp
 output_dir: output
 scratch: tmp
@@ -23,7 +23,7 @@ kmer_size: 5   # [5]
 # Trimming #
 ############
 
-trimming: adapterremoval  # [adapterremoval | empty]
+trimming: bbduk  # [adapterremoval | empty]
 for_adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA  # [AGATCGGAAGAGCACACGTCTGAACTCCAGTCA]
 rev_adapter: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT  # [AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT]
 min_read_length: 20                             # [20]
@@ -43,7 +43,7 @@ subsample_to: 100000
 # CPU and memory params #
 #########################
 
-threads: 4
+threads: 24
 memory: 8
 memory_java: 8
 threads_star: 8
@@ -56,7 +56,7 @@ threads_flash: 8
 ##############
 
 ercc_fasta: datasets/additional_data_RNA_seq/ERCC92.fa
-bbmap_ref: datasets/bbmap/two_short_plus_ercc.fa
+bbmap_ref: datasets/bbmap/two_short.fa
 polyA_ref: datasets/bbmap/polyA.fa
 reference_dna: /media/root/ocean/Databases/hg19/Encode_annotation/genome.fa
 reference_gtf: /media/root/ocean/Databases/hg19/Encode_annotation/gencode.v19.annotation.gtf

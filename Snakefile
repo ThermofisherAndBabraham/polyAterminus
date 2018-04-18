@@ -56,20 +56,20 @@ max_picard_t = config["memory"]
 
 target = []
 
-if config["trimming"]:
-    target += [
-               output_dir + "/trimming_report.html",
-               output_dir + "/trimming_report_data"
-               ]
+# if config["trimming"]:
+#     target += [
+#                output_dir + "/trimming_report.html",
+#                output_dir + "/trimming_report_data"
+#                ]
+#
+# target += [
+#            output_dir + "/fastqc_report_raw_reads.html",
+#            output_dir + "/fastqc_report_raw_reads_data",
+#            output_dir + "/fastqc_report_processed_reads.html",
+#            output_dir + "/fastqc_report_processed_reads_data"
+#           ]
 
-target += [
-           output_dir + "/fastqc_report_raw_reads.html",
-           output_dir + "/fastqc_report_raw_reads_data",
-           output_dir + "/fastqc_report_processed_reads.html",
-           output_dir + "/fastqc_report_processed_reads_data"
-          ]
-
-target += [",".join(expand("{tmp_dir}/{stem}_R1_001subs_polyAmarked.fastq", \
+target += [",".join(expand("{tmp_dir}/{stem}_gene_body_coverage.geneBodyCoverage.curves.png", \
                         stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 #                        stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 rule target:
@@ -162,6 +162,30 @@ if config["trimming"] == "adapterremoval":
             cmd += " --file1 %s --file2 %s --settings %s --gzip --discarded %s" %(input[0], input[1], output[2], output[3])
             print(cmd)
             os.system(cmd)
+elif config["trimming"] == "bbduk":
+
+    rule trim_adapters:
+        input: input_dir + "/{stem}_R1_001.fastq.gz",
+               input_dir + "/{stem}_R2_001.fastq.gz"
+        output: temp("{tmp_dir}/{stem}_R1_001Trimmed.fastq.gz"),
+                temp("{tmp_dir}/{stem}_R2_001Trimmed.fastq.gz"),
+                "{tmp_dir}/{stem}_trim.settings"
+        threads: config["threads"]
+        params: for_adapter=config["for_adapter"],
+                rev_adapter=config["rev_adapter"],
+                quality_limit=config["quality_limit"],
+                maximum_n_count_in_reads=config["maximum_n_count_in_reads"],
+                max_errors=config['max_errors'],
+                min_length=config['min_read_length'],
+                bbmap_ref = config["bbmap_ref"]
+        run:
+                cmd = "nohup bbduk.sh in=%s in2=%s out=%s out2=%s " %(input[0],input[1],output[0],output[1])
+                cmd += "ref=%s threads=%s " %(params.bbmap_ref,threads)
+                cmd += "ktrim=r k=23 mink=11 hdist=1 minlength=100 maxns=1 tpe tbo   qtrim=r trimq=15 "
+                cmd += ">%s; " %(output[2])    # Only forward reads are used vvv
+
+                print(cmd)
+                os.system(cmd)
 
     rule trimming_report:
         input: expand("{tmp_dir}/{stem}_trim.settings", \
@@ -219,7 +243,7 @@ rule  RSeQC_gene_body_coverage:
     output: "{tmp_dir}/{stem}_gene_body_coverage.geneBodyCoverage.curves.png"
     params: prefix="{tmp_dir}/{stem}_gene_body_coverage"
     params: sample = "{stem}"
-    shell: "./scripts/geneBody_coverage_absolute.py -l 1000 -i {input.bam[0]} -r {input.bed} -f png -o {params.prefix}"
+    shell: "./scripts/geneBody_coverage_absolute.py -l 600 -i {input.bam[0]} -r {input.bed} -f png -o {params.prefix}"
 
 rule  RSeQC_read_distribution:
     input: bam = ["{tmp_dir}/{stem}_polyA_sorted.bam", \
@@ -305,7 +329,7 @@ else: #atfiltruojam su polyA ir su referenco sekele #laikom kad referenxco ryri 
             run:
                 cmd = " bbduk2.sh in=%s  outm=%s  " %(input[0],output[0])
                 cmd += "fref=%s threads=%s rcomp=f " %(params.bbmap_ref,threads)
-                cmd += " k=50  "
+                cmd += " k=30  "
                 cmd += " 2>&1 | tee  %s; " %(output[1])    # Only forward reads are used vvv
                 print(cmd)
                 os.system(cmd)

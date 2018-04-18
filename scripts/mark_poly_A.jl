@@ -29,7 +29,7 @@ function main(args)
             help="Minimum length of not polyA sequence"
             required = false
             arg_type = Int64
-            default = 20
+            default = 30
     #polymorphism_limit::Float64=0.1, minimum_coverage::Int64=5 , mutations_number_limit
      end
 

@@ -1,3 +1,7 @@
+using BioSequences
+using Base.Test
+push!(LOAD_PATH, "../../")
+using PolyAanalysis
 # """
 # returns minimum kmer streches of not polyA ins a supplied transcript sequences
 # Arguments:
@@ -10,16 +14,6 @@
 # function get_polyA_prefixes(sequence::String,minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64)::Array{String,1}
 #
 
-
-
-
-#test set 1 just a simple nt real example
-seq = "ATCCTTGGCTTTCTTCCGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGGGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-output = ["ATCCTTGGCTTTCTTCCGGG", "GGGGGGGGGGGGGGGGGGGG"]
-ref_seq=ReferenceSequence(BioSequence{DNAAlphabet{4}}(seq))
-file = "/media/root/ocean/Databases/ensemble_transcripts/gencode.v27.transcripts.fa"
-
-#println()
-
+test_file="testing_datasets/transcripts.fa"
 #test trimming
-get_polyA_prefixes_from_file(file,20,10,1,10)
+@test String["ATCCTTGGCTTTCTTCCGGG","GGCGGGGAAGGGGGGGGGGG"] == get_polyA_prefixes_from_file(test_file,20,40,1,20)

@@ -151,16 +151,18 @@ function get_polyA_prefixes(sequence::BioSequences.ReferenceSequence,
     for m in matchall(re, BioSequence{DNAAlphabet{4}}(sequence), false)
         polyA_part=m[minimum_not_polyA+1:end]
         polyA_length=length(polyA_part)
-        println(m, " all fragment")
-        println(polyA_part, " polyA_part")
-        println(polyA_length," ",minimum_polyA_length)
 
-        println("-----------------")
         #check if passes length requirement
         if polyA_length >= minimum_polyA_length
             #check if polyA mismatches are within limits
-            println((composition(polyA_part[1:minimum_polyA_length])[DNA_A] - minimum_polyA_length))
+
+            # println((composition(polyA_part[1:minimum_polyA_length])[DNA_A] - minimum_polyA_length))
             if (composition(polyA_part[1:minimum_polyA_length])[DNA_A] - minimum_polyA_length) <= maximum_non_A_symbols
+                # println(m, " all fragment")
+                # println(polyA_part, " polyA_part")
+                # println(polyA_length," ",minimum_polyA_length)
+                #
+                # println("-----------------")
                 push!(output,m[1:minimum_not_polyA])
             end
         end
@@ -193,18 +195,14 @@ function get_polyA_prefixes_from_file(file::String,
         minimum_polyA_length,
         maximum_non_A_symbols,
         minimum_distance_from_non_poly_A)
-        if length(prefixes) > 0
-            println(FASTA.identifier(record))
-            println(prefixes)
-            println(FASTA.sequence(record))
-            exit()
-        end
+        # if length(prefixes) > 0
+        #     println(FASTA.identifier(record))
+        #     println(prefixes)
+        #     println(FASTA.sequence(record))
+        # end
+        output=vcat(output,prefixes)
     end
-
     close(reader)
-
-    exit()
-
     return(output)
 end
 
