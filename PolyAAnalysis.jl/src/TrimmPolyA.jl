@@ -1,22 +1,4 @@
-
-# PolyAanalysis.jl
-# =======
-#
-# A julia package for the representation and manipulation of biological sequences.
-#
-# This file is a part of BioJulia.
-# License is MIT: https://github.com/BioJulia/BioSequences.jl/blob/master/LICENSE.md
-
-__precompile__()
-
-module PolyAanalysis
-
-export
-    trim_polyA_file_records,
-    trim_polyA_from_fastq_record
-
-using BioSequences
-
+#!/usr/bin/env julia
 
 """
 Trims a R1 fastq file and writes polyA reads to output file
@@ -124,5 +106,3 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
         return(fq,has_proper_polyA)
     end
 end
-
-end #module PolyAanalysis

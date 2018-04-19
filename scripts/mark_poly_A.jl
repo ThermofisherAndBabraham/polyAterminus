@@ -7,7 +7,7 @@ using ArgParse.parse_args          #=                                    =#
 using BioSequences
 
 push!(LOAD_PATH, ".")
-using PolyAanalysis
+using PolyAAnalysis
 
 
 
