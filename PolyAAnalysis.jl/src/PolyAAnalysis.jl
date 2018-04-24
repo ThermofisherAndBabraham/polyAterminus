@@ -22,14 +22,20 @@ export
     ParseRecord,
     GetIntervalSet,
     ItsectCollection,
-    rmdups!
+    rmdups!,
+    WrFrame
 
-using Bio.Align
-using DataFrames
-using DataStructures
-using CSV
-using Bio.Intervals
-using BioSequences
+import BioAlignments: BAM
+import DataFrames: DataFrame
+import DataFrames: eachrow, deleterows!
+import DataStructures
+import CSV
+import GenomicFeatures: GFF3
+import GenomicFeatures: Interval
+import GenomicFeatures: Strand
+import GenomicFeatures: IntervalCollection
+import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, first, last
+import BioSequences: FASTQ
 
 include("MapPolyA.jl")
 include("TrimmPolyA.jl")

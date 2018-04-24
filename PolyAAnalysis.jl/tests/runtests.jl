@@ -3,6 +3,7 @@ module TestPolyAanalsis
 using BioSequences
 using Base.Test
 push!(LOAD_PATH, "../../")
+using DataFrames
 using PolyAAnalysis
 
 

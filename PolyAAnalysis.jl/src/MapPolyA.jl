@@ -1,9 +1,10 @@
 #!/usr/bin/env julia
 
+
 function BamRead(bam::String)
 
-    reader = open(Bio.Align.BAMReader, bam)
-    record = Bio.Align.BAMRecord()
+    reader = open(BAM.Reader, bam)
+    record = BAM.Record()
     treads = Int64(0)
     passreads = Int64(0)
     pareads = Int64(0)
@@ -11,28 +12,30 @@ function BamRead(bam::String)
 
     while !eof(reader)
         read!(reader, record)
-        rfname::String = refname(record)
-        flag = Bio.Align.flag(record)
-        treads += 1
+        if BAM.ismapped(record)
+            rfname::String = BAM.refname(record)
+            flag = BAM.flag(record)
+            treads += 1
 
-        if (flag&4 == 0) && (flag&256 == 0) && (flag&2048 == 0)
-            spl = split(seqname(record),":")
+            if (flag&4 == 0) && (flag&256 == 0) && (flag&2048 == 0)
+                spl = split(BAM.tempname(record),":")
 
-            if flag&16 == 0
-                strness = "+"
-            elseif flag&16 == 16
-                strness = "-"
-            else
-                strness = "."
+                if flag&16 == 0 || flag&32 == 0
+                    strness = "+"
+                elseif flag&16 == 16 || flag&32 == 32
+                    strness = "-"
+                else
+                    strness = "."
+                end
+
+                if spl[2] == "A"
+                    pareads += 1
+                    rpos = BAM.rightposition(record)
+                    cps = rfname * "::" * string(rpos) * "::" * strness
+                    pclus = Clust!(pclus, cps, parse(Int16, spl[1]))
+                end
+                passreads += 1
             end
-
-            if spl[2] == "A"
-                pareads += 1
-                rpos = rightposition(record)
-                cps = rfname * "::" * string(rpos) * "::" * strness
-                pclus = Clust!(pclus, cps, parse(Int16, spl[1]))
-            end
-            passreads += 1
         end
     end
 
@@ -84,7 +87,7 @@ function ParseGFF3(gff3file::String)::IntervalCollection{String}
         chr::String = GFF3.seqid(record)
         start::Int = GFF3.seqstart(record)
         seqend::Int = GFF3.seqend(record)
-        strand::Bio.Intervals.Strand = GFF3.strand(record)
+        strand::Strand = GFF3.strand(record)
 
         mdstr = ParseRecord(record)
         push!(intcol, Interval(chr, start, seqend, strand, mdstr))
@@ -211,23 +214,21 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
     dfp = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
     dfn = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
-    for x in a, y in b
-        if isoverlapping(x, y)
-            if strand(x) == strand(y)
-                geneID = split(split(metadata(y),";")[3],"=")[2]
-                gn = split(split(metadata(y),";")[6],"=")[2]
-                c = parse(Int32,split(split(metadata(x),";")[4],"=")[2])
-                str = string(strand(x))
-                ft = split(split(metadata(y),";")[7],"=")[2]
-                me = parse(Float32,split(split(metadata(x),";")[1],"=")[2])
-                mi = parse(Int16,split(split(metadata(x),";")[2],"=")[2])
-                mx = parse(Int16,split(split(metadata(x),";")[3],"=")[2])
-                bt = split(split(metadata(y),";")[5],"=")[2]
-                if strand(x) == Strand('-')
-                    push!(dfn, [seqname(x) first(x) last(x) gn c str ft me mi mx bt])
-                else
-                    push!(dfp, [seqname(x) first(x) last(x) gn c str ft me mi mx bt])
-                end
+    for i in eachoverlap(a, b)
+        if strand(i[1]) == strand(i[2])
+            geneID = split(split(metadata(i[2]),";")[3],"=")[2]
+            gn = split(split(metadata(i[2]),";")[6],"=")[2]
+            c = parse(Int32,split(split(metadata(i[1]),";")[4],"=")[2])
+            str = string(strand(i[1]))
+            ft = split(split(metadata(i[2]),";")[7],"=")[2]
+            me = parse(Float32,split(split(metadata(i[1]),";")[1],"=")[2])
+            mi = parse(Int16,split(split(metadata(i[1]),";")[2],"=")[2])
+            mx = parse(Int16,split(split(metadata(i[1]),";")[3],"=")[2])
+            bt = split(split(metadata(i[2]),";")[5],"=")[2]
+            if strand(i[1]) == Strand('-')
+                push!(dfn, [seqname(i[1]) first(i[1]) last(i[1]) gn c str ft me mi mx bt])
+            else
+                push!(dfp, [seqname(i[1]) first(i[1]) last(i[1]) gn c str ft me mi mx bt])
             end
         end
     end
