@@ -216,15 +216,18 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
 
     for i in eachoverlap(a, b)
         if strand(i[1]) == strand(i[2])
-            geneID = split(split(metadata(i[2]),";")[3],"=")[2]
-            gn = split(split(metadata(i[2]),";")[6],"=")[2]
-            c = parse(Int32,split(split(metadata(i[1]),";")[4],"=")[2])
+            splt1::Array{SubString{String},1} = split(metadata(i[1]),";")
+            splt::Array{SubString{String},1} = split(metadata(i[2]),";")
+
+            geneID = split(splt[3],"=")[2]
+            gn = split(splt[6],"=")[2]
+            c = parse(Int32,split(splt1[4],"=")[2])
             str = string(strand(i[1]))
-            ft = split(split(metadata(i[2]),";")[7],"=")[2]
-            me = parse(Float32,split(split(metadata(i[1]),";")[1],"=")[2])
-            mi = parse(Int16,split(split(metadata(i[1]),";")[2],"=")[2])
-            mx = parse(Int16,split(split(metadata(i[1]),";")[3],"=")[2])
-            bt = split(split(metadata(i[2]),";")[5],"=")[2]
+            ft = split(splt[7],"=")[2]
+            me = parse(Float32,split(splt1[1],"=")[2])
+            mi = parse(Int16,split(splt1[2],"=")[2])
+            mx = parse(Int16,split(splt1[3],"=")[2])
+            bt = split(splt[5],"=")[2]
             if strand(i[1]) == Strand('-')
                 push!(dfn, [seqname(i[1]) first(i[1]) last(i[1]) gn c str ft me mi mx bt])
             else
@@ -236,8 +239,8 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
     sort!(dfn, rev=true, cols = [:Start, :End, :Name])
     sort!(dfp, cols = [:Start, :End, :Name])
 
-    dfp = rmdups!(dfp)
-    dfn = rmdups!(dfn)
+    dfp = rmdups(dfp)
+    dfn = rmdups(dfn)
 
     ct = Int64(0)
     l = size(dfn)[1]
@@ -281,33 +284,38 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
 end
 
 
-function rmdups!(dframe::DataFrame)::DataFrame
-    allrows = eachrow(dframe)
-    ct = Int32(0)
+function rmdups(dframe::DataFrame)::DataFrame
 
-    for (i, x) in enumerate(eachrow(dframe))
-        ct += 1
-        while i+ct <= size(dframe)[1]
-            while i+ct <= size(dframe)[1] && x[1] == allrows[i+ct][1] && x[2] == allrows[i+ct][2] && x[3] == allrows[i+ct][3] && x[4] == allrows[i+ct][4]
-                if x[7] == "stop_codon"
-                    deleterows!(dframe, i+ct)
-                elseif x[7] == "start_codon"
-                    deleterows!(dframe, i+ct)
-                elseif x[7] == "CDS"
-                    deleterows!(dframe, i+ct)
-                elseif x[7] == "exon"
-                    deleterows!(dframe, i+ct)
-                elseif x[7] == "transcript"
-                    deleterows!(dframe, i+ct)
-                elseif x[7] == "gene"
-                    deleterows!(dframe, i+ct)
-                end
-            end
+    df = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
+    d = Dict("gene"=>8,"transcript"=>7,"exon"=>6,
+             "CDS"=>5,"UTR"=>4,"start_codon"=>3,
+             "stop_codon"=>2,"Selenocysteine"=>1)
+
+    ct = Int64(0)
+    ct2 = Int64(0)
+
+    for y in eachrow(dframe[:,1:6])
+        ct2 += 1
+
+        if ct == 0
+            push!(df, [dframe[1][ct2] dframe[2][ct2] dframe[3][ct2] dframe[4][ct2] dframe[5][ct2] dframe[6][ct2] dframe[7][ct2] dframe[8][ct2] dframe[9][ct2] dframe[10][ct2] dframe[11][ct2]])
             ct += 1
         end
-        ct = 0
+
+        if ct > 0
+            if df[end,:][1] == [y[1]] && df[end,:][2] == [y[2]] && df[end,:][3] == [y[3]] && df[end,:][4] == [y[4]] && df[end,:][5] == [y[5]] && df[end,:][6] == [y[6]]
+
+                if d[dframe[7][ct2]] < d[df[end,:][7][1]]
+                    df[7][ct] = dframe[7][ct2]
+                end
+
+            else
+                ct += 1
+                push!(df, [dframe[1][ct2] dframe[2][ct2] dframe[3][ct2] dframe[4][ct2] dframe[5][ct2] dframe[6][ct2] dframe[7][ct2] dframe[8][ct2] dframe[9][ct2] dframe[10][ct2] dframe[11][ct2]])
+            end
+        end
     end
 
-    return dframe
+    return df
 end

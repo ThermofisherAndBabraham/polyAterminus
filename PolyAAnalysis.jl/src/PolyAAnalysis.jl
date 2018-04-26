@@ -26,7 +26,7 @@ export
     WrFrame
 
 import BioAlignments: BAM
-import DataFrames: DataFrame
+import DataFrames: DataFrame, DataFrameRow 
 import DataFrames: eachrow, deleterows!
 import DataStructures
 import CSV
