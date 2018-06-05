@@ -8,7 +8,7 @@ using CodecZlib
 using IterTools
 
 push!(LOAD_PATH, ".")
-using PolyAanalysis
+using PolyAAnalysis
 using  BioSequences
 
 

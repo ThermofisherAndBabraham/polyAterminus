@@ -120,11 +120,19 @@ def genebody_percentile(refbed, mRNA_len_cut = 100):
 		flag=0
 		for st,end in zip(exon_starts,exon_ends):
 			gene_all_base.extend(range(st+1,end+1))		#1-based coordinates on genome
+<<<<<<< HEAD
 		if len(gene_all_base) < mRNA_len_cut:
 			continue
 		#get 100 points
 		pos_select=[]
 		g_percentiles[geneID] = (chrom, strand, mystat.percentile_list(gene_all_base[-mRNA_len_cut:]))	#get 100 points from each gene's coordinates
+=======
+		if len(gene_all_base) <= mRNA_len_cut:
+			continue
+		#get 100 points
+		pos_select=[]
+		g_percentiles[geneID] = (chrom, strand, mystat.percentile_list(gene_all_base[mRNA_len_cut:]))	#get 100 points from each gene's coordinates
+>>>>>>> cb75b3c2e8e9ad20f9f390ef89c67f162757492b
 	printlog("Total " + str(transcript_count) + ' transcripts loaded')
 	return g_percentiles
 

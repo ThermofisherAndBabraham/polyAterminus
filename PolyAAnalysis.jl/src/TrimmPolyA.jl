@@ -1,23 +1,4 @@
-
-# PolyAanalysis.jl
-# =======
-#
-# A julia package for the representation and manipulation of biological sequences.
-#
-# This file is a part of BioJulia.
-# License is MIT: https://github.com/BioJulia/BioSequences.jl/blob/master/LICENSE.md
-
-__precompile__()
-
-module PolyAanalysis
-
-export
-    trim_polyA_file_records,
-    trim_polyA_from_fastq_record,
-    get_polyA_prefixes
-
-using BioSequences
-
+#!/usr/bin/env julia
 
 
 """
