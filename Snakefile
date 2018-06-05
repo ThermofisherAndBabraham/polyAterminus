@@ -3,6 +3,7 @@
 import fnmatch
 import yaml
 import os.path
+import sys
 from shutil import copyfile
 # --------------------------------- Config parsing ---------------------------- #
 
@@ -37,7 +38,7 @@ def get_stems(input_dir):
     stems = []
     for root, dirnames, filenames in os.walk(input_dir):
         for f in filenames:
-            if f.find(".fastq.gz")>-1 or f.find(".fq.gz")>-1:
+            if (f.find(".fastq.gz")>-1 or f.find(".fq.gz")>-1) and f.find("Illumina")==-1 :
                 f = f.replace("_R1_001.fastq.gz", "")
                 f = f.replace("_R2_001.fastq.gz", "")
                 f = f.replace("1.fq.gz", "")
@@ -301,7 +302,8 @@ rule runSTARonPolyA:
 rule trimPolyAReads:
         input:"{tmp_dir}/{stem}_R1_001subs_polyA.fastq"
         output:"{tmp_dir}/{stem}_R1_001subs_polyAmarked.fastq"
-        shell: "julia --depwarn=no scripts/mark_poly_A.jl -i {input} -o {output} "
+        params: transcripts_fasta=config["transcripts_fasta"]
+        shell: "julia --depwarn=no scripts/mark_poly_A.jl  -i {input} -o {output} -r {params.transcripts_fasta} "
 
 if config["reference_for_subset"] == None:
     rule SearchA:
@@ -329,7 +331,7 @@ else: #atfiltruojam su polyA ir su referenco sekele #laikom kad referenxco ryri 
             run:
                 cmd = " bbduk2.sh in=%s  outm=%s  " %(input[0],output[0])
                 cmd += "fref=%s threads=%s rcomp=f " %(params.bbmap_ref,threads)
-                cmd += " k=30  "
+                cmd += " k=50  "
                 cmd += " 2>&1 | tee  %s; " %(output[1])    # Only forward reads are used vvv
                 print(cmd)
                 os.system(cmd)

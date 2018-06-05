@@ -8,10 +8,11 @@
 # Should be .fq.gz or .fastq.gz files. #
 ########################################
 
-input_dir: /media/root/working_disk1/data_RNA_seqone_sample/
+input_dir: /media/root/working_disk/testing_data_two #testing_data #/media/root/working_disk/data_RNA_seqone_sample/
 tmp_dir: tmp
 output_dir: output
 scratch: tmp
+firts_strand_stem: UHRR_100_Collibri_A_L001
 
 ###################
 # Fastqc options. #
@@ -58,6 +59,7 @@ threads_flash: 8
 ercc_fasta: datasets/additional_data_RNA_seq/ERCC92.fa
 bbmap_ref: datasets/bbmap/two_short.fa
 polyA_ref: datasets/bbmap/polyA.fa
+transcripts_fasta: /media/root/ocean/Databases/hg38/gencode.v28.transcripts.fa.gz #testing_data/gencode.v28.transcripts_min27A.fasta
 reference_dna: /media/root/ocean/Databases/hg19/Encode_annotation/genome.fa
 reference_gtf: /media/root/ocean/Databases/hg19/Encode_annotation/gencode.v19.annotation.gtf
 reference_for_subset: #datasets/additional_data_RNA_seq/ERCC92_withou_polyA.fa
