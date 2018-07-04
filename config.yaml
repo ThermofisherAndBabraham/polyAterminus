@@ -50,6 +50,7 @@ memory_java: 8
 threads_star: 8
 threads_julia: 6
 threads_flash: 8
+threads_marker: 6
 
 
 ##############
@@ -60,6 +61,6 @@ ercc_fasta: datasets/additional_data_RNA_seq/ERCC92.fa
 bbmap_ref: datasets/bbmap/two_short.fa
 polyA_ref: datasets/bbmap/polyA.fa
 transcripts_fasta: /media/root/ocean/Databases/hg38/gencode.v28.transcripts.fa.gz #testing_data/gencode.v28.transcripts_min27A.fasta
-reference_dna: /media/root/ocean/Databases/hg19/Encode_annotation/genome.fa
+reference_dna: /media/root/ocean/Databases/hg19/full_genome/genome.fa
 reference_gtf: /media/root/ocean/Databases/hg19/Encode_annotation/gencode.v19.annotation.gtf
 reference_for_subset: #datasets/additional_data_RNA_seq/ERCC92_withou_polyA.fa

@@ -303,7 +303,8 @@ rule trimPolyAReads:
         input:"{tmp_dir}/{stem}_R1_001subs_polyA.fastq"
         output:"{tmp_dir}/{stem}_R1_001subs_polyAmarked.fastq"
         params: transcripts_fasta=config["transcripts_fasta"]
-        shell: "julia --depwarn=no scripts/mark_poly_A.jl  -i {input} -o {output} -r {params.transcripts_fasta} "
+        threads: config["threads_marker"]
+        shell: "julia --depwarn=no scripts/mark_poly_A.jl  -p {threads} -i {input} -o {output} -r {params.transcripts_fasta} "
 
 if config["reference_for_subset"] == None:
     rule SearchA:
