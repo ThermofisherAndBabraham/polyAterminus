@@ -16,6 +16,9 @@ export
     trim_polyA_file_records,
     trim_polyA_from_fastq_record,
     get_polyA_prefixes,
+    detect_polyA_in_a_string,
+    extend_poly_A,
+    check_polyA_prefixes,
     BamRead,
     Clust!,
     PolACalculus,
@@ -36,8 +39,9 @@ import GenomicFeatures: Interval
 import GenomicFeatures: Strand
 import GenomicFeatures: IntervalCollection
 import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, first, last
-import BioSequences: FASTQ
+import BioSequences: FASTQ, writer
 import BioSequences
+import StringDistances: Levenshtein, evaluate
 
 include("MapPolyA.jl")
 include("TrimmPolyA.jl")

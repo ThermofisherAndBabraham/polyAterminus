@@ -23,8 +23,6 @@ Arguments:
     minimum_polyA_length - minimum length of polyA strech
     number_of_workers - number of julia processes
     use_cached_results - use already calculated results
-
-
 """
 function get_polyA_prefixes_from_file(file::String;
     minimum_not_polyA::Int64=20,
@@ -82,6 +80,108 @@ function get_polyA_prefixes_from_file(file::String;
     println(STDERR,"colected prefixes are sto")
 end
 
+"""
+finds and trims polyA having reads from a fastq pair
+Arguments:
+    fastq1 - file with forward reads in FASTQ format, can be gzipped
+    fastq2 - file with reverse reads in FASTQ format, can be gzipped
+    prefixes - array of prefixes of natural polyA
+    number_of_workers - number of julia processes
+    output_prefix - prefix for output files
+    minimum_not_polyA - minimum length of not polyA strech in a read
+    minimum_polyA_length - minimum length of polyA strech
+    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
+    minimum_distance_from_non_poly - minimum distance of non A symbols in polyA strech from the nonA sequence
+    maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
+"""
+
+function trim_polyA_from_files(
+    fastq1::String,
+    fastq2::String,
+    prefixes::Array{String,1},
+    number_of_workers::Int64,
+    output_prefix::String,
+    minimum_not_polyA::Int64,
+    minimum_polyA_length::Int64,
+    maximum_non_A_symbols::Int64,
+    minimum_distance_from_non_poly_A::Int64,
+    maximum_distance_with_prefix_database::Int64
+    )
+
+    #input streams
+
+    file_stream1=open(fastq1,"r")
+    if fastq1[length(fastq1)-2:end] == ".gz"
+        file_stream1=GzipDecompressorStream(file_stream1)
+    end
+    file_stream2=open(fastq2,"r")
+    if fastq2[length(fastq2)-2:end] == ".gz"
+        file_stream2=GzipDecompressorStream(file_stream2)
+    end
+    #output streams
+    fastqo1=GzipCompressorStream(open(output_prefix*"_R1_woPolyA.fastq.gz","w"))
+    fastqo2=GzipCompressorStream(open(output_prefix*"_R2_woPolyA.fastq.gz","w"))
+    fastqo_s=GzipCompressorStream(open(output_prefix*"_PolyA.fastq.gz","w"))
+    fastqo_d=GzipCompressorStream(open(output_prefix*"_discarded.fastq.gz","w"))
+
+    ostream1 = BioSequences.FASTQ.Writer(fastqo1,quality_header=false)
+    ostream2 = BioSequences.FASTQ.Writer(fastqo2,quality_header=false)
+    ostreams = BioSequences.FASTQ.Writer(fastqo_s,quality_header=false)
+    ostreamd = BioSequences.FASTQ.Writer(fastqo_d,quality_header=false)
+
+
+    # counter
+    counter = convert(SharedArray, zeros(Int64, nworkers()))
+
+
+    ct_pair=0
+    ct_poly_a_proper=0
+    ct_discarded=0
+
+
+    for records in zip(collect(FASTQ.Reader(file_stream1)), collect(FASTQ.Reader(file_stream2)))
+
+        revseq_rev_read=String(reverse_complement!(FASTQ.sequence(records[2])))
+        seq_for_read=String(FASTQ.sequence(records[1]))
+        ct_pair+=1
+        #initial filtering
+        polyA_detected=false
+        if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols) &&
+            detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols)
+                #tries sto esxtend polyA
+                cosensus_extended_fwd_read=extend_poly_A(records[1],records[2])
+                fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_record(cosensus_extended_fwd_read,
+                    minimum_not_polyA,
+                    minimum_polyA_length,
+                    maximum_non_A_symbols,
+                    minimum_distance_from_non_poly_A)
+                #check if the read is in pefixes list of naturall polyA sreches
+                if has_proper_polyA
+                    has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database)
+                end
+
+        end
+        #detect_polyA_in_fastq_record(records[1],minimum_polyA_length,maximum_non_A_symbols)
+        if !polyA_detected
+            write(fastqo1,records[1])
+            write(fastqo2,records[2])
+        else
+            if has_proper_polyA
+                write(fastqo_s,fqo_trimmed)
+            else
+                write(fastqo_d,cosensus_extended_fwd_read)
+            end
+        end
+
+    end
+
+    close(fastqo1)
+    close(fastqo2)
+    close(fastqo_s)
+    close(fastqo_d)
+
+end
+
 
 function main(args)
 
@@ -89,7 +189,7 @@ function main(args)
     arg_parse_settings = ArgParseSettings(description="Program trims polyA from the 3' end and modifies read name @[numberofAat3']_[originalname]")
     @add_arg_table arg_parse_settings begin
         "--output","-o"
-            help="Output fatstq"
+            help="Output prefix"
             required = true
             arg_type = String
 
@@ -124,31 +224,37 @@ function main(args)
             help="Number of additional julia workers for parallel procesing"
             required = true
             arg_type = Int64
-    #polymorphism_limit::Float64=0.1, minimum_coverage::Int64=5 , mutations_number_limit
+
+    # testing julia --depwarn=no scripts/mark_poly_A.jl  -p -a  tmp/UHRR_100_Collibri_A_L001_R1_001subs.fastq.gz -b tmp/UHRR_100_Collibri_A_L001_R2_001subs.fastq.gz -o tmp/UHRR_100_Collibri_A_L001_R1_001subs_polyAmarked.fastq -r /media/root/ocean/Databases/hg38/gencode.v28.transcripts.fa.gz -c
      end
 
     parsed_args = parse_args(arg_parse_settings) #= In order to use variables, =#
                                                  #= use parsed_args["foo_bar"] =#
     #Parse reference file and collect prefixes of naturally occuring polyA prefixes
-    get_polyA_prefixes_from_file(parsed_args["reference-transcripts"],
+
+
+    polyA_prefixes=get_polyA_prefixes_from_file(parsed_args["reference-transcripts"],
     minimum_not_polyA=parsed_args["minimum-length"],
     minimum_polyA_length=parsed_args["minimum-polyA-length"],
     number_of_workers=parsed_args["processes"],
     use_cached_results=parsed_args["use-precalculated-reference-transcripts-prefixes"])
-    exit()
-    # println(STDERR, "Extracting prefixes of polyA streches from transcripts in file:\n$reference_transcripts")
-    # polyA_in_transcripts = get_polyA_prefixes_from_file(
-    # reference_transcripts,
-    # minimum_not_polyA=parsed_args["minimum-length"],
-    # minimum_polyA_length=50,
-    # maximum_non_A_symbols=0,
-    # minimum_distance_from_non_poly_A=10)
-    # println(STDERR, @sprintf("Reference parsed, collected %i prefixes",length(polyA_in_transcripts)))
+    trim_polyA_from_files(
+        parsed_args["fastq-f"],
+        parsed_args["fastq-r"],
+        polyA_prefixes,
+        parsed_args["processes"],
+        parsed_args["output"],
+        parsed_args["minimum-length"],
+        parsed_args["minimum-polyA-length"],
+        3, # maximum_non_A_symbols::Int64,
+        1, # minimum_distance_from_non_poly::Int64
+        3  # maximum_distance_with_prefix_database
+        )
+
 
     #= Main code =#
 
-    trim_polyA_file_records(parsed_args["output"],
-    parsed_args["input"], parsed_args["minimum-length"])
+
 end
 
 main(ARGS)

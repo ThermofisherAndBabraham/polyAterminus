@@ -25,7 +25,7 @@ function trim_polyA_file_records(output_fastq::String,
     ct_reads=0
     for fq in istream
         ct_reads+=1
-        fqo,has_proper_polyA = trim_polyA_from_fastq_record(fq,
+        fqo,has_proper_polyA, polyA_detected = trim_polyA_from_fastq_record(fq,
             minimum_not_polyA,
             minimum_polyA_length,
             maximum_non_A_symbols,
@@ -46,6 +46,80 @@ end
 
 
 
+"""
+checks if a string of a read contains polyA strechA strating from the 3' end
+    fq_seq - string for testing
+    minimum_polyA_length - minimum length of polyA strech
+    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
+    maximum_number_of_adapter_remains_3_end - some adapter remains can be left after trimming
+"""
+function detect_polyA_in_a_string(
+    fq_seq::String,
+    minimum_polyA_length::Int64,
+    maximum_non_A_symbols::Int64;
+    maximum_number_of_adapter_remains_3_end=10)::Bool
+    has_poly_a=false
+    fq_length=length(fq_seq)
+    window_position_from_3_end=0
+    for startini in minimum_polyA_length:fq_length
+        window_position_from_3_end+=1
+        if window_position_from_3_end > maximum_number_of_adapter_remains_3_end
+            break
+            #seach of polyA strech discontinued after sertain length after 3' end
+            #some adapter remains can be left after trimming
+        end
+        start=fq_length-startini+1
+        substring=String(fq_seq[start:start+minimum_polyA_length-1])
+        if substring[1]=='A' #first symbol of apolyA strech must be A
+            ct=0
+            for symb in substring
+                if symb != 'A'
+                    ct+=1
+                end
+            end
+            if ct <=maximum_non_A_symbols
+                has_poly_a=true
+                break
+            end
+        end
+    end
+    return(has_poly_a)
+end
+
+"""
+Tries to merge and extend forward read
+    fq_seq1 - string of forward read
+    fq_seq2 - string of reverse read reverse complement
+"""
+function extend_poly_A(
+    fq_seq1::FASTQ.Record,
+    fq_seq2::FASTQ.Record)::FASTQ.Record
+    return(fq_seq1)
+end
+
+"""
+check if the read is in pefixes list of naturall polyA sreches
+    fqo_trimmed - fastq record
+    prefixes - array of natural prefixes
+    maximum_distance_with_prefix_database - maximum Levenstain distance
+"""
+
+function check_polyA_prefixes(
+    fqo_trimmed::FASTQ.Record,
+    prefixes::Array{String,1},
+    maximum_distance_with_prefix_database::Int64
+    )::Bool
+    has_no_match=true
+    for pref in prefixes
+        if  evaluate(Levenshtein(), String(FASTQ.sequence(fqo_trimmed)),pref) <= maximum_distance_with_prefix_database
+            has_no_match=false
+            break
+        end
+    end
+    return(has_no_match)
+end
+
+
 
 """
 function that trimmes 3 polyA tail of a given fastq entry and outputs trimmed read with number of polyA indicated in read's name
@@ -59,9 +133,10 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
-    minimum_distance_from_non_poly_A::Int64)::Tuple{FASTQ.Record,Bool}
+    minimum_distance_from_non_poly_A::Int64)::Tuple{FASTQ.Record,Bool,Bool}
 
     has_proper_polyA=false
+    polyA_detected=false
     seq=String(FASTQ.sequence(fq))
     name=FASTQ.identifier(fq)
     description=FASTQ.description(fq)
@@ -102,10 +177,12 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
         has_proper_polyA=true
     end
 
+    polyA_detected=(polyA_start > 0)
+
     if has_proper_polyA
-        return(fqo,has_proper_polyA)
+        return(fqo,has_proper_polyA,polyA_detected)
     else
-        return(fq,has_proper_polyA)
+        return(fq,has_proper_polyA,polyA_detected)
     end
 end
 
