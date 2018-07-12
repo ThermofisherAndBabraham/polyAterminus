@@ -1,4 +1,4 @@
-module TestPolyAanalsis
+module TestPolyAAnalsis
 
 using BioSequences
 using Base.Test
@@ -8,16 +8,11 @@ using PolyAAnalysis
 
 @testset "PolyAtrimming" begin
 include("trim_polyA_from_fastq_record.jl")
-end
-
-
-@testset "PolyADatabase" begin
-include("get_polyA_prefixes.jl")
-include("get_polyA_prefixes_from_file.jl")
+include("trim_polyA_from_fastq_record.jl")
 end
 
 @testset "MapPolyA" begin
-include("MapPolyA_tests.jl")
+include("MapPolyA.jl")
 end
 
 

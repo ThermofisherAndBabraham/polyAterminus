@@ -8,10 +8,12 @@ using CodecZlib
 using IterTools
 using JLD, HDF5
 using FileIO
+using  BioSequences
 
 push!(LOAD_PATH, ".")
 using PolyAAnalysis
-using  BioSequences
+
+
 
 
 
@@ -80,8 +82,60 @@ function get_polyA_prefixes_from_file(file::String;
     println(STDERR,"colected prefixes are sto")
 end
 
+
+
 """
-finds and trims polyA having reads from a fastq pair
+finds and trims polyA having reads from a pair of fastq records
+Arguments:
+    fastq1 - FASTQ record
+    fastq2 - FASTQ record
+    prefixes - array of prefixes of natural polyA
+    minimum_not_polyA - minimum length of not polyA strech in a read
+    minimum_polyA_length - minimum length of polyA strech
+    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
+    minimum_distance_from_non_poly - minimum distance of non A symbols in polyA strech from the nonA sequence
+    maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
+"""
+
+function trim_polyA_from_fastq_pair(
+    fastq1::FASTQ.Record,
+    fastq2::FASTQ.Record,
+    prefixes::Array{String,1},
+    minimum_not_polyA::Int64,
+    minimum_polyA_length::Int64,
+    maximum_non_A_symbols::Int64,
+    minimum_distance_from_non_poly_A::Int64,
+    maximum_distance_with_prefix_database::Int64
+    )::Tuple{FASTQ.Record, Bool, Bool}
+    polyA_detected=false
+    has_proper_polyA=false
+    revseq_rev_read=String(reverse_complement!(FASTQ.sequence(fastq2)))
+    seq_for_read=String(FASTQ.sequence(fastq1))
+    if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols) &&
+        detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols)
+            #tries sto esxtend polyA
+            cosensus_extended_fwd_read=extend_poly_A(fastq1,fastq2)
+            fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_record(cosensus_extended_fwd_read,
+                minimum_not_polyA,
+                minimum_polyA_length,
+                maximum_non_A_symbols,
+                minimum_distance_from_non_poly_A)
+            #check if the read is in pefixes list of natural polyA streches
+            if has_proper_polyA
+                has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database)
+                if !has_proper_polyA
+                    fqo_trimmed=cosensus_extended_fwd_read
+                end
+            end
+    else
+        fqo_trimmed=fastq1
+    end
+    return(fqo_trimmed, has_proper_polyA, polyA_detected)
+end
+
+
+"""
+finds and trims polyA having reads from a fastq files pair
 Arguments:
     fastq1 - file with forward reads in FASTQ format, can be gzipped
     fastq2 - file with reverse reads in FASTQ format, can be gzipped
@@ -124,10 +178,10 @@ function trim_polyA_from_files(
     fastqo_s=GzipCompressorStream(open(output_prefix*"_PolyA.fastq.gz","w"))
     fastqo_d=GzipCompressorStream(open(output_prefix*"_discarded.fastq.gz","w"))
 
-    ostream1 = BioSequences.FASTQ.Writer(fastqo1,quality_header=false)
-    ostream2 = BioSequences.FASTQ.Writer(fastqo2,quality_header=false)
-    ostreams = BioSequences.FASTQ.Writer(fastqo_s,quality_header=false)
-    ostreamd = BioSequences.FASTQ.Writer(fastqo_d,quality_header=false)
+    ostream1 = fastqo1 #BioSequences.FASTQ.Writer(fastqo1)
+    ostream2 = fastqo2 #BioSequences.FASTQ.Writer(fastqo2)
+    ostreams = fastqo_s #BioSequences.FASTQ.Writer(fastqo_s)
+    ostreamd = fastqo_d #BioSequences.FASTQ.Writer(fastqo_d)
 
 
     # counter
@@ -139,37 +193,32 @@ function trim_polyA_from_files(
     ct_discarded=0
 
 
+
     for records in zip(collect(FASTQ.Reader(file_stream1)), collect(FASTQ.Reader(file_stream2)))
 
-        revseq_rev_read=String(reverse_complement!(FASTQ.sequence(records[2])))
-        seq_for_read=String(FASTQ.sequence(records[1]))
+
         ct_pair+=1
         #initial filtering
-        polyA_detected=false
-        if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols) &&
-            detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols)
-                #tries sto esxtend polyA
-                cosensus_extended_fwd_read=extend_poly_A(records[1],records[2])
-                fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_record(cosensus_extended_fwd_read,
-                    minimum_not_polyA,
-                    minimum_polyA_length,
-                    maximum_non_A_symbols,
-                    minimum_distance_from_non_poly_A)
-                #check if the read is in pefixes list of naturall polyA sreches
-                if has_proper_polyA
-                    has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database)
-                end
-
-        end
+        fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
+                                                        records[1],
+                                                        records[2],
+                                                        prefixes,
+                                                        minimum_not_polyA,
+                                                        minimum_polyA_length,
+                                                        maximum_non_A_symbols,
+                                                        minimum_distance_from_non_poly_A,
+                                                        maximum_distance_with_prefix_database
+                                                        )
         #detect_polyA_in_fastq_record(records[1],minimum_polyA_length,maximum_non_A_symbols)
         if !polyA_detected
-            write(fastqo1,records[1])
-            write(fastqo2,records[2])
+            println(fastqo1,records[1])
+            println(fastqo2,records[2])
         else
             if has_proper_polyA
-                write(fastqo_s,fqo_trimmed)
+                println(fastqo_s,fqo_trimmed)
+                #BioSequences.FASTQ.write(fastqo_s,fqo_trimmed)
             else
-                write(fastqo_d,cosensus_extended_fwd_read)
+                println(fastqo_d,fqo_trimmed)
             end
         end
 

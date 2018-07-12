@@ -1,7 +1,7 @@
 using BioSequences
 using Base.Test
 push!(LOAD_PATH, "../../")
-using PolyAanalysis
+using PolyAAnalysis
 # """
 # returns minimum kmer streches of not polyA ins a supplied transcript sequences
 # Arguments:

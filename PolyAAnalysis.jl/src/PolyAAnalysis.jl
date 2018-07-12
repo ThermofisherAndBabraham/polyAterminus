@@ -39,7 +39,7 @@ import GenomicFeatures: Interval
 import GenomicFeatures: Strand
 import GenomicFeatures: IntervalCollection
 import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, first, last
-import BioSequences: FASTQ, writer
+import BioSequences: FASTQ
 import BioSequences
 import StringDistances: Levenshtein, evaluate
 
