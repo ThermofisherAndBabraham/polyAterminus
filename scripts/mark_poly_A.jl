@@ -8,7 +8,9 @@ using CodecZlib
 using IterTools
 using JLD, HDF5
 using FileIO
-using  BioSequences
+using BioSequences
+using BufferedStreams
+
 
 push!(LOAD_PATH, ".")
 using PolyAAnalysis
@@ -45,11 +47,7 @@ function get_polyA_prefixes_from_file(file::String;
         	file_stream=GzipDecompressorStream(file_stream)
     	end
         # Start julia worker processors
-        addprocs(number_of_workers)
-    	# Load modeules in the workers
-        eval(macroexpand(quote @everywhere using BioSequences end))
-        eval(macroexpand(quote @everywhere push!(LOAD_PATH, ".") end))
-        eval(macroexpand(quote @everywhere using PolyAAnalysis end))
+
     	#Crate counter for progress nonitoring
         counter = convert(SharedArray, zeros(Int64, nworkers()))
     	# Arry to collect results for output
@@ -84,54 +82,6 @@ end
 
 
 
-"""
-finds and trims polyA having reads from a pair of fastq records
-Arguments:
-    fastq1 - FASTQ record
-    fastq2 - FASTQ record
-    prefixes - array of prefixes of natural polyA
-    minimum_not_polyA - minimum length of not polyA strech in a read
-    minimum_polyA_length - minimum length of polyA strech
-    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
-    minimum_distance_from_non_poly - minimum distance of non A symbols in polyA strech from the nonA sequence
-    maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
-"""
-
-function trim_polyA_from_fastq_pair(
-    fastq1::FASTQ.Record,
-    fastq2::FASTQ.Record,
-    prefixes::Array{String,1},
-    minimum_not_polyA::Int64,
-    minimum_polyA_length::Int64,
-    maximum_non_A_symbols::Int64,
-    minimum_distance_from_non_poly_A::Int64,
-    maximum_distance_with_prefix_database::Int64
-    )::Tuple{FASTQ.Record, Bool, Bool}
-    polyA_detected=false
-    has_proper_polyA=false
-    revseq_rev_read=String(reverse_complement!(FASTQ.sequence(fastq2)))
-    seq_for_read=String(FASTQ.sequence(fastq1))
-    if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols) &&
-        detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols)
-            #tries sto esxtend polyA
-            cosensus_extended_fwd_read=extend_poly_A(fastq1,fastq2)
-            fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_record(cosensus_extended_fwd_read,
-                minimum_not_polyA,
-                minimum_polyA_length,
-                maximum_non_A_symbols,
-                minimum_distance_from_non_poly_A)
-            #check if the read is in pefixes list of natural polyA streches
-            if has_proper_polyA
-                has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database)
-                if !has_proper_polyA
-                    fqo_trimmed=cosensus_extended_fwd_read
-                end
-            end
-    else
-        fqo_trimmed=fastq1
-    end
-    return(fqo_trimmed, has_proper_polyA, polyA_detected)
-end
 
 
 """
@@ -147,6 +97,9 @@ Arguments:
     maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
     minimum_distance_from_non_poly - minimum distance of non A symbols in polyA strech from the nonA sequence
     maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
+    minimum_poly_A_between - minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
+    include_polyA - Includes output polyA sequences as pseudo pair end's  into output fastq
+
 """
 
 function trim_polyA_from_files(
@@ -159,7 +112,9 @@ function trim_polyA_from_files(
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
     minimum_distance_from_non_poly_A::Int64,
-    maximum_distance_with_prefix_database::Int64
+    maximum_distance_with_prefix_database::Int64,
+    minimum_poly_A_between::Int64,
+    include_polyA::Bool
     )
 
     #input streams
@@ -172,62 +127,171 @@ function trim_polyA_from_files(
     if fastq2[length(fastq2)-2:end] == ".gz"
         file_stream2=GzipDecompressorStream(file_stream2)
     end
-    #output streams
-    fastqo1=GzipCompressorStream(open(output_prefix*"_R1_woPolyA.fastq.gz","w"))
-    fastqo2=GzipCompressorStream(open(output_prefix*"_R2_woPolyA.fastq.gz","w"))
-    fastqo_s=GzipCompressorStream(open(output_prefix*"_PolyA.fastq.gz","w"))
-    fastqo_d=GzipCompressorStream(open(output_prefix*"_discarded.fastq.gz","w"))
+    #output files
 
-    ostream1 = fastqo1 #BioSequences.FASTQ.Writer(fastqo1)
-    ostream2 = fastqo2 #BioSequences.FASTQ.Writer(fastqo2)
-    ostreams = fastqo_s #BioSequences.FASTQ.Writer(fastqo_s)
-    ostreamd = fastqo_d #BioSequences.FASTQ.Writer(fastqo_d)
+    fastqo1_f=output_prefix*"_R1_trimmedPolyA.fastq.gz"
+    fastqo2_f=output_prefix*"_R2_trimmedPolyA.fastq.gz"
+    fastqo_s_f=output_prefix*"_PolyA.fastq.gz"
+    fastqo_d_f=output_prefix*"_discarded.fastq.gz"
+    # @everywere test=open("test1.fq"
 
+    fastqo1=open(fastqo1_f,"w")
+    fastqo2=open(fastqo2_f,"w")
+    fastqo_s=open(fastqo_s_f,"w")
+    fastqo_d=open(fastqo_d_f,"w")
 
-    # counter
-    counter = convert(SharedArray, zeros(Int64, nworkers()))
-
-
-    ct_pair=0
-    ct_poly_a_proper=0
-    ct_discarded=0
-
-
-
-    for records in zip(collect(FASTQ.Reader(file_stream1)), collect(FASTQ.Reader(file_stream2)))
-
-
-        ct_pair+=1
-        #initial filtering
-        fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
-                                                        records[1],
-                                                        records[2],
-                                                        prefixes,
-                                                        minimum_not_polyA,
-                                                        minimum_polyA_length,
-                                                        maximum_non_A_symbols,
-                                                        minimum_distance_from_non_poly_A,
-                                                        maximum_distance_with_prefix_database
-                                                        )
-        #detect_polyA_in_fastq_record(records[1],minimum_polyA_length,maximum_non_A_symbols)
-        if !polyA_detected
-            println(fastqo1,records[1])
-            println(fastqo2,records[2])
-        else
-            if has_proper_polyA
-                println(fastqo_s,fqo_trimmed)
-                #BioSequences.FASTQ.write(fastqo_s,fqo_trimmed)
-            else
-                println(fastqo_d,fqo_trimmed)
-            end
-        end
-
-    end
-
+    #initiate and close
+    flush(fastqo1)
+    flush(fastqo2)
+    flush(fastqo_s)
+    flush(fastqo_d)
     close(fastqo1)
     close(fastqo2)
     close(fastqo_s)
     close(fastqo_d)
+
+    "Opens output files in worker nodes"
+    function open_output_files(name::String)
+        global suffix = "_"*string(myid()-1)
+        global n1=split(name,"\n")[1]
+        eval(Main,:(fastqo1=GzipCompressorStream(open(n1*suffix,"a"))))
+        global n2=split(name,"\n")[2]
+        eval(Main,:(fastqo2=GzipCompressorStream(open(n2*suffix,"a"))))
+        global n3=split(name,"\n")[3]
+        eval(Main,:(fastqo_s=GzipCompressorStream(open(n3*suffix,"a"))))
+        global n4=split(name,"\n")[4]
+        eval(Main,:(fastqo_d=GzipCompressorStream(open(n4*suffix,"a"))))
+    end
+
+    "Closes output files in worker nodes"
+    function close_output_files(name::String)
+        eval(Main,:(close(fastqo1)))
+        eval(Main,:(close(fastqo2)))
+        eval(Main,:(close(fastqo_s)))
+        eval(Main,:(close(fastqo_d)))
+    end
+
+    "Set  output file names"
+    function set_output_files(name::String)
+        global suffix = "_"*string(myid()-1)
+        global n1=split(name,"\n")[1]
+        eval(Main,:(fastqo1_f=n1*suffix))
+        eval(Main,:(fastqo1_f_all=n1))
+        global n2=split(name,"\n")[2]
+        eval(Main,:(fastqo2_f=n2*suffix))
+        eval(Main,:(fastqo2_f_all=n2))
+        global n3=split(name,"\n")[3]
+        eval(Main,:(fastqo_s_f=n3*suffix))
+        eval(Main,:(fastqo_s_f_all=n3))
+        global n4=split(name,"\n")[4]
+        eval(Main,:(fastqo_d_f=n4*suffix))
+        eval(Main,:(fastqo_d_f_all=n4))
+    end
+
+    "Merges file names"
+    function merge_output_files(name::String)
+        global suffix = "_"*string(myid()-1)
+        global n1=split(name,"\n")[1]
+        eval(Main,:(fastqo1_f=n1*suffix))
+        eval(Main,:(fastqo1_f_all=n1))
+        global n2=split(name,"\n")[2]
+        eval(Main,:(fastqo2_f=n2*suffix))
+        eval(Main,:(fastqo2_f_all=n2))
+        global n3=split(name,"\n")[3]
+        eval(Main,:(fastqo_s_f=n3*suffix))
+        eval(Main,:(fastqo_s_f_all=n3))
+        global n4=split(name,"\n")[4]
+        eval(Main,:(fastqo_d_f=n4*suffix))
+        eval(Main,:(fastqo_d_f_all=n4))
+
+        fastqo1_f=Main.fastqo1_f
+        fastqo1_f_all=Main.fastqo1_f_all
+        fastqo2_f=Main.fastqo2_f
+        fastqo2_f_all=Main.fastqo2_f_all
+        fastqo_s_f=Main.fastqo_s_f
+        fastqo_s_f_all=Main.fastqo_s_f_all
+        fastqo_d_f=Main.fastqo_d_f
+        fastqo_d_f_all=Main.fastqo_d_f_all
+
+        ln=`cat $fastqo1_f >> $fastqo1_f_all ; rm $fastqo1_f`
+
+        println("cat $fastqo1_f >> $fastqo1_f_all ; rm $fastqo1_f")
+        run(ln)
+        ln=`cat $fastqo2_f >> $fastqo2_f_all ; rm $fastqo2_f  `
+        run(ln)
+        ln=`cat $fastqo_s_f >> $fastqo_s_f_all; rm $fastqo_s_f `
+        run(ln)
+        ln=`cat $fastqo_d_f >> $fastqo_d_f_all ; rm $fastqo_d_f`
+        run(ln)
+    end
+
+
+
+    # Indicate output files for worker nodes and open files
+    Files_output = convert(SharedArray,collect(join([fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f],"\n")))
+    @sync for (i, p) in enumerate(workers())
+        @spawnat p open_output_files(String(Files_output))
+    end
+
+    @sync for (i, p) in enumerate(workers())
+        @spawnat p open_output_files(String(Files_output))
+    end
+
+
+
+
+
+
+
+
+    debug_id="ST-E00243:413:HKCCHCCXY:7:2103:16234:11435"
+    debug=false
+
+    #Counters for specific pairs
+    ct_all = convert(SharedArray, zeros(Int64, nworkers()))
+    ct_pair_without_polyA = convert(SharedArray, zeros(Int64, nworkers()))
+    ct_pair_with_proper_polyA = convert(SharedArray, zeros(Int64, nworkers()))
+    ct_pair_with_discarded_polyA = convert(SharedArray, zeros(Int64, nworkers()))
+
+    tic()
+    @sync @parallel for records in collect(zip(collect(FASTQ.Reader(file_stream1)), collect(FASTQ.Reader(file_stream2)))) #@sync @parallel
+        trim_polyA_from_fastq_pair(
+                                    records[1],
+                                    records[2],
+                                    prefixes,
+                                    minimum_not_polyA,
+                                    minimum_polyA_length,
+                                    maximum_non_A_symbols,
+                                    maximum_distance_with_prefix_database,
+                                    minimum_poly_A_between,
+                                    include_polyA,
+                                    ct_all,
+                                    ct_pair_without_polyA,
+                                    ct_pair_with_proper_polyA,
+                                    ct_pair_with_discarded_polyA,
+                                    debug=debug
+                                    )
+    end
+    toc()
+    # close output files for worker nodes
+    Files_output = convert(SharedArray,collect(join([fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f],"\n")))
+    @sync for (i, p) in enumerate(workers())
+        @spawnat p close_output_files(String(Files_output))
+    end
+
+
+    pecentage_proper=round(100*sum(ct_pair_with_proper_polyA)/sum(ct_all),2)
+    pecentage_discarded=round(100*sum(ct_pair_with_discarded_polyA)/sum(ct_all),2)
+    println(STDERR,"Parsed reads: ",sum(ct_all))
+    println(STDERR," % of having proper polyA: $pecentage_proper")
+    println(STDERR," % of having discarded polyA: $pecentage_discarded")
+    println(STDERR,"Merging files produced by polyA")
+    Files_output = convert(SharedArray,collect(join([fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f],"\n")))
+    @sync for (i, p) in enumerate(workers())
+        @spawnat p merge_output_files(String(Files_output))
+    end
+
+
 
 end
 
@@ -259,7 +323,7 @@ function main(args)
             help="Minimum length of  polyA sequence"
             required = false
             arg_type = Int64
-            default = 20
+            default = 10 #10
         "--reference-transcripts","-r"
             help="Reference transcripts in fasta format"
             required = true
@@ -268,7 +332,9 @@ function main(args)
         "--use-precalculated-reference-transcripts-prefixes","-c"
             help="Load polyA prefixes from previous run"
             action = :store_true
-
+        "--incude-polyA-in-output","-i"
+            help="Includes output polyA sequences as pseudo pair end's  into output fastq pair"
+            action = :store_true
         "--processes","-p"
             help="Number of additional julia workers for parallel procesing"
             required = true
@@ -280,6 +346,15 @@ function main(args)
     parsed_args = parse_args(arg_parse_settings) #= In order to use variables, =#
                                                  #= use parsed_args["foo_bar"] =#
     #Parse reference file and collect prefixes of naturally occuring polyA prefixes
+
+    addprocs(parsed_args["processes"])
+    # Load modeules in the workers
+    eval(macroexpand(quote @everywhere using BioSequences end))
+    eval(macroexpand(quote @everywhere using CodecZlib end))
+    eval(macroexpand(quote @everywhere using BufferedStreams end))
+    eval(macroexpand(quote @everywhere push!(LOAD_PATH, ".") end))
+    eval(macroexpand(quote @everywhere using PolyAAnalysis end))
+
 
 
     polyA_prefixes=get_polyA_prefixes_from_file(parsed_args["reference-transcripts"],
@@ -293,12 +368,19 @@ function main(args)
         polyA_prefixes,
         parsed_args["processes"],
         parsed_args["output"],
+
         parsed_args["minimum-length"],
         parsed_args["minimum-polyA-length"],
-        3, # maximum_non_A_symbols::Int64,
+        1, # maximum_non_A_symbols::Int64,
         1, # minimum_distance_from_non_poly::Int64
-        3  # maximum_distance_with_prefix_database
+        3,  # maximum_distance_with_prefix_database
+        4, # minimum_poly_A_between
+        parsed_args["incude-polyA-in-output"]
         )
+
+
+
+
 
 
     #= Main code =#

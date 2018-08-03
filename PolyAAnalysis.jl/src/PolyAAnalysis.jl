@@ -18,7 +18,9 @@ export
     get_polyA_prefixes,
     detect_polyA_in_a_string,
     extend_poly_A,
+    trim_polyA_3end,
     check_polyA_prefixes,
+    trim_polyA_from_fastq_pair,
     BamRead,
     Clust!,
     PolACalculus,
@@ -42,6 +44,9 @@ import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, f
 import BioSequences: FASTQ
 import BioSequences
 import StringDistances: Levenshtein, evaluate
+import TranscodingStreams
+import CodecZlib
+import BufferedStreams
 
 include("MapPolyA.jl")
 include("TrimmPolyA.jl")

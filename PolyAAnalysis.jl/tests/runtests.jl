@@ -7,7 +7,7 @@ using DataFrames
 using PolyAAnalysis
 
 @testset "PolyAtrimming" begin
-include("trim_polyA_from_fastq_record.jl")
+include("trim_polyA_3end.jl")
 include("trim_polyA_from_fastq_record.jl")
 end
 
