@@ -188,42 +188,8 @@ function trim_polyA_from_files(
         eval(Main,:(fastqo_d_f_all=n4))
     end
 
-    "Merges file names"
-    function merge_output_files(name::String)
-        global suffix = "_"*string(myid()-1)
-        global n1=split(name,"\n")[1]
-        eval(Main,:(fastqo1_f=n1*suffix))
-        eval(Main,:(fastqo1_f_all=n1))
-        global n2=split(name,"\n")[2]
-        eval(Main,:(fastqo2_f=n2*suffix))
-        eval(Main,:(fastqo2_f_all=n2))
-        global n3=split(name,"\n")[3]
-        eval(Main,:(fastqo_s_f=n3*suffix))
-        eval(Main,:(fastqo_s_f_all=n3))
-        global n4=split(name,"\n")[4]
-        eval(Main,:(fastqo_d_f=n4*suffix))
-        eval(Main,:(fastqo_d_f_all=n4))
 
-        fastqo1_f=Main.fastqo1_f
-        fastqo1_f_all=Main.fastqo1_f_all
-        fastqo2_f=Main.fastqo2_f
-        fastqo2_f_all=Main.fastqo2_f_all
-        fastqo_s_f=Main.fastqo_s_f
-        fastqo_s_f_all=Main.fastqo_s_f_all
-        fastqo_d_f=Main.fastqo_d_f
-        fastqo_d_f_all=Main.fastqo_d_f_all
 
-        ln=`cat $fastqo1_f >> $fastqo1_f_all ; rm $fastqo1_f`
-
-        println("cat $fastqo1_f >> $fastqo1_f_all ; rm $fastqo1_f")
-        run(ln)
-        ln=`cat $fastqo2_f >> $fastqo2_f_all ; rm $fastqo2_f  `
-        run(ln)
-        ln=`cat $fastqo_s_f >> $fastqo_s_f_all; rm $fastqo_s_f `
-        run(ln)
-        ln=`cat $fastqo_d_f >> $fastqo_d_f_all ; rm $fastqo_d_f`
-        run(ln)
-    end
 
 
 
@@ -286,9 +252,17 @@ function trim_polyA_from_files(
     println(STDERR," % of having proper polyA: $pecentage_proper")
     println(STDERR," % of having discarded polyA: $pecentage_discarded")
     println(STDERR,"Merging files produced by polyA")
-    Files_output = convert(SharedArray,collect(join([fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f],"\n")))
-    @sync for (i, p) in enumerate(workers())
-        @spawnat p merge_output_files(String(Files_output))
+
+    for f in [fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f]
+        cmd_strings=Array{String,1}()
+        for (i, p) in enumerate(workers())
+            nr_file=p-1
+            fp="$f"*"_"*"$nr_file"
+            #println(p)
+            push!(cmd_strings," cat $fp >> $f ")
+        end
+        cmd_string=join(cmd_strings, " ; ")*" ; wait "
+        run(`bash -c $cmd_string`)
     end
 
 
