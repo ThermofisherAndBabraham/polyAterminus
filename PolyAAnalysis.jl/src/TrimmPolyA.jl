@@ -329,14 +329,17 @@ function trim_polyA_from_fastq_pair(
     )
     polyA_detected=false
     has_proper_polyA=false
-    revseq_rev_read=String(BioSequences.reverse_complement!(FASTQ.sequence(fastq2)))
     seq_for_read=String(FASTQ.sequence(fastq1))
+    revseq_rev_read=String(BioSequences.reverse_complement!(FASTQ.sequence(fastq2)))
 
     if debug
-        println("seq_for_read", seq_for_read)
-        println("revseq_rev_read", revseq_rev_read)
-        println(detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols))
-        println(detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols))
+        println("for_read:", "\n", fastq1, "\n")
+        println("rev_read:", "\n", fastq2, "\n")
+        println("seq_for_read", seq_for_read, "\n")
+        println("revseq_rev_read", revseq_rev_read, "\n")
+        println("Is polyA in seq_for_read: ", detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols))
+        println("Is polyA in revseq_rev_read: ", detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols))
+        println("used parameter: minimum_polyA_length $minimum_polyA_length, maximum_non_A_symbols $maximum_non_A_symbols")
     end
 
 
@@ -392,8 +395,7 @@ Arguments:
 """
 
 function trim_polyA_from_fastq_pair(
-    fastq1::FASTQ.Record,
-    fastq2::FASTQ.Record,
+    fastq_pairs::RemoteChannel,
     prefixes::Array{String,1},
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
@@ -404,76 +406,73 @@ function trim_polyA_from_fastq_pair(
 	ct_all::SharedArray,
 	ct_pair_without_polyA::SharedArray,
 	ct_pair_with_proper_polyA::SharedArray,
-	ct_pair_with_discarded_polyA::SharedArray;
+	ct_pair_with_discarded_polyA::SharedArray,
+    fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}};
     debug_id="None",
-    debug=false
-    )
-    #initial filtering
-    if debug_id == FASTQ.identifier(fastq1)
-        debug=true
-    else
-        debug=false
-    end
+    debug=false   )
+    fastq1_b=IOBuffer()
+    fastq2_b=IOBuffer()
+    fastq_s_b=IOBuffer()
+    fastq_d_b=IOBuffer()
+    (fastq1, fastq2) = take!(fastq_pairs)
+    close(fastq1_b)
+    close(fastq2_b)
+    close(fastq_s_b)
+    close(fastq_d_b)
+    put!(fastqo_1_2_s_d,("a","b","c","d"))
+    # #initial filtering
+    #     if debug_id == FASTQ.identifier(fastq1)
+    #         debug=true
+    #     else
+    #         debug=false
+    #     end
+    #
+    # 	ct_all[(myid()-1)] += 1
+    #
+    #     fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
+    #                                                     fastq1,
+    #                                                     fastq2,
+    #                                                     prefixes,
+    #                                                     minimum_not_polyA,
+    #                                                     minimum_polyA_length,
+    #                                                     maximum_non_A_symbols,
+    #                                                     maximum_distance_with_prefix_database,
+    #                                                     minimum_poly_A_between,
+    #                                                     debug_id=debug_id,
+    #                                                     debug=debug
+    #                                                     )
+    #
+    #     if !polyA_detected
+    # 		ct_pair_without_polyA[(myid()-1)] += 1
+    #         println(fastq1_b,fastq1)
+    #         println(fastq2_b,fastq2)
+    #     else
+    #         a=1
+    #         # if has_proper_polyA
+    #         #     put!(fastqo_s,fqo_trimmed)
+    # 		# 	ct_pair_with_proper_polyA[(myid()-1)] += 1
+    #         #     #get reverse complement of the polyA read
+    #         #     if include_polyA
+    #         #         name=FASTQ.identifier(fqo_trimmed)
+    #         #         description=FASTQ.description(fqo_trimmed)
+    #         #         rev_quality=reverse(FASTQ.quality(fqo_trimmed))
+    #         #         rev_seq=BioSequences.reverse_complement!(FASTQ.sequence(fqo_trimmed))
+    #         #         fqo_trimmed_rev=FASTQ.Record(name, description, rev_seq, rev_quality)
+    # 		# 		println(fastqo12, (fqo_trimmed,fqo_trimmed_rev))
+    #         #     end
+    #         # else
+    #         #
+    #         #     put!(fastqo_d,fqo_trimmed)
+    # 		# 	ct_pair_with_discarded_polyA[(myid()-1)] += 1
+    #         # end
+    #     end
+    # 	if mod(sum(ct_all),1000)==0
+    # 		println(STDERR, "Parsed reads: ",sum(ct_all),
+    # 		" without polyA: ",sum(ct_pair_without_polyA),
+    # 		" with proper polyA: ",sum(ct_pair_with_proper_polyA),
+    # 		" with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
+    # 	end
 
-	ct_all[(myid()-1)] += 1
 
-
-    fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
-                                                    fastq1,
-                                                    fastq2,
-                                                    prefixes,
-                                                    minimum_not_polyA,
-                                                    minimum_polyA_length,
-                                                    maximum_non_A_symbols,
-                                                    maximum_distance_with_prefix_database,
-                                                    minimum_poly_A_between,
-                                                    debug_id=debug_id,
-                                                    debug=debug
-                                                    )
-    #detect_polyA_in_fastq_record(records[1],minimum_polyA_length,maximum_non_A_symbols)
-
-	#get global variables of output streams
-	global fastqo1 = Main.fastqo1
-	global fastqo2 = Main.fastqo2
-	global fastqo_d = Main.fastqo_d
-	global fastqo_s = Main.fastqo_s
-
-    if !polyA_detected
-		ct_pair_without_polyA[(myid()-1)] += 1
-		#write(test,fastq1)
-		println(fastqo1,fastq1)
-        println(fastqo2,fastq2)
-		flush(fastqo1)
-		flush(fastqo2)
-    else
-        if has_proper_polyA
-            println(fastqo_s,fqo_trimmed)
-			flush(fastqo_s)
-			ct_pair_with_proper_polyA[(myid()-1)] += 1
-            #get reverse complement of the polyA read
-            if include_polyA
-                name=FASTQ.identifier(fqo_trimmed)
-                description=FASTQ.description(fqo_trimmed)
-                rev_quality=reverse(FASTQ.quality(fqo_trimmed))
-                rev_seq=BioSequences.reverse_complement!(FASTQ.sequence(fqo_trimmed))
-                fqo_trimmed_rev=FASTQ.Record(name, description, rev_seq, rev_quality)
-				println(fastqo1, fqo_trimmed)
-                println(fastqo2, fqo_trimmed_rev)
-				flush(fastqo1)
-				flush(fastqo2)
-            end
-        else
-
-            println(fastqo_d,fqo_trimmed)
-			flush(fastqo_d)
-			ct_pair_with_discarded_polyA[(myid()-1)] += 1
-        end
-    end
-	if mod(sum(ct_all),1000)==0
-		println("Parsed reads: ",sum(ct_all),
-		" without polyA: ",sum(ct_pair_without_polyA),
-		" with proper polyA: ",sum(ct_pair_with_proper_polyA),
-		" with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
-	end
 
 end

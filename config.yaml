@@ -8,7 +8,7 @@
 # Should be .fq.gz or .fastq.gz files. #
 ########################################
 
-input_dir: /media/root/ngs_nas3/testing_data_poly_A/ #testing_data #/media/root/working_disk/data_RNA_seqone_sample/
+input_dir: /media/root/working_disk/data_RNA_seqone_sample/ #/media/root/ngs_nas3/testing_data_poly_A/ #testing_data #/media/root/working_disk/data_RNA_seqone_sample/
 tmp_dir: tmp
 output_dir: output
 scratch: tmp
@@ -38,7 +38,7 @@ max_errors: 0.1                                 # [0.1]
 # Subsampling #
 ###############
 
-subsample_to: 100000
+subsample_to:
 
 #########################
 # CPU and memory params #
@@ -48,7 +48,7 @@ threads: 24
 memory: 8
 memory_java: 8
 threads_star: 8
-threads_julia: 6
+threads_julia: 8
 threads_flash: 8
 threads_marker: 6
 

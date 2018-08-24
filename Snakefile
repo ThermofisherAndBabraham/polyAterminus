@@ -70,7 +70,7 @@ target = []
 #            output_dir + "/fastqc_report_processed_reads_data"
 #           ]
 
-target += [",".join(expand("{tmp_dir}/{stem}_R1_001subs_polyAmarked.fastq", \
+target += [",".join(expand("{tmp_dir}/{stem}_PolyA.fastq.gz", \
                         stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 #                        stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 rule target:
@@ -159,17 +159,14 @@ rule trim_adapters:
 if config["subsample_to"] == None:
     rule subsample:
         input: "{tmp_dir}/{stem}_R1_001Trimmed.fastq.gz",
-               "{tmp_dir}/{stem}_R2_001Trimmed.fastq.gz",
-               "{tmp_dir}/read_counts.txt"
+               "{tmp_dir}/{stem}_R2_001Trimmed.fastq.gz"
         output: "{tmp_dir}/{stem}_R1_001subs.fastq.gz",
                 "{tmp_dir}/{stem}_R2_001subs.fastq.gz"
+        params: tmp_dir="{tmp_dir}",
+                f1="{stem}_R1_001subs.fastq.gz",
+                f2="{stem}_R2_001subs.fastq.gz"
         threads: config["threads"]
-        shell: """minimum=`python ./scripts/""" +
-               """get_minimum_read_number.py --input {tmp_dir}/read_counts.txt`;
-               seqkit sample -s 11 -j {threads} --two-pass -n $minimum \
-               {input[0]} -o {output[0]};
-               seqkit sample -s 11 -j {threads} --two-pass -n $minimum \
-               {input[1]} -o {output[1]};"""
+        shell: "cd {params.tmp_dir} ; cp  ../{input[0]}  {params.f1} ; cp   ../{input[1]} {params.f2} ; cd .. "
 
 else:
     rule subsample:
@@ -253,10 +250,13 @@ rule  gtfToBed:
 #
 rule trimPolyAReads:
         input:"{tmp_dir}/{stem}_R1_001subs.fastq.gz" , "{tmp_dir}/{stem}_R2_001subs.fastq.gz"
-        output:"{tmp_dir}/{stem}_R1_001subs_polyAmarked.fastq"
-        params: transcripts_fasta=config["transcripts_fasta"]
+        output:"{tmp_dir}/{stem}_R1_trimmedPolyA.fastq.gz",
+                "{tmp_dir}/{stem}_R2_trimmedPolyA.fastq.gz",
+                "{tmp_dir}/{stem}_PolyA.fastq.gz",
+                "{tmp_dir}/{stem}_discarded.fastq.gz"
+        params: transcripts_fasta=config["transcripts_fasta"], output_stem="{tmp_dir}/{stem}"
         threads: config["threads_marker"]
-        shell: "julia --depwarn=no scripts/mark_poly_A.jl  -p {threads} -a {input[0]} -b {input[1]} -o test -c -r {params.transcripts_fasta} "
+        shell: "julia --depwarn=no scripts/mark_poly_A.jl  -i -p {threads} -a {input[0]} -b {input[1]} -o {params.output_stem} -c -r {params.transcripts_fasta} "
 
 rule SearchA:
         input: "{tmp_dir}/{stem}_R1_001subs.fastq.gz",

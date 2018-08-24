@@ -99,6 +99,7 @@ Arguments:
     maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
     minimum_poly_A_between - minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
     include_polyA - Includes output polyA sequences as pseudo pair end's  into output fastq
+    chunk_fastq_analysis - Fastq pairs which are analysed together
 
 """
 
@@ -114,19 +115,14 @@ function trim_polyA_from_files(
     minimum_distance_from_non_poly_A::Int64,
     maximum_distance_with_prefix_database::Int64,
     minimum_poly_A_between::Int64,
-    include_polyA::Bool
+    include_polyA::Bool;
+    analysis_partition_size::Int64=100
     )
 
     #input streams
 
-    file_stream1=open(fastq1,"r")
-    if fastq1[length(fastq1)-2:end] == ".gz"
-        file_stream1=GzipDecompressorStream(file_stream1)
-    end
-    file_stream2=open(fastq2,"r")
-    if fastq2[length(fastq2)-2:end] == ".gz"
-        file_stream2=GzipDecompressorStream(file_stream2)
-    end
+
+
     #output files
 
     fastqo1_f=output_prefix*"_R1_trimmedPolyA.fastq.gz"
@@ -140,78 +136,12 @@ function trim_polyA_from_files(
     fastqo_s=open(fastqo_s_f,"w")
     fastqo_d=open(fastqo_d_f,"w")
 
-    #initiate and close
-    flush(fastqo1)
-    flush(fastqo2)
-    flush(fastqo_s)
-    flush(fastqo_d)
-    close(fastqo1)
-    close(fastqo2)
-    close(fastqo_s)
-    close(fastqo_d)
+    #counter for jobs
+    ct_jobs=0
+    jub_submision_finished=false
 
-    "Opens output files in worker nodes"
-    function open_output_files(name::String)
-        global suffix = "_"*string(myid()-1)
-        global n1=split(name,"\n")[1]
-        eval(Main,:(fastqo1=GzipCompressorStream(open(n1*suffix,"a"))))
-        global n2=split(name,"\n")[2]
-        eval(Main,:(fastqo2=GzipCompressorStream(open(n2*suffix,"a"))))
-        global n3=split(name,"\n")[3]
-        eval(Main,:(fastqo_s=GzipCompressorStream(open(n3*suffix,"a"))))
-        global n4=split(name,"\n")[4]
-        eval(Main,:(fastqo_d=GzipCompressorStream(open(n4*suffix,"a"))))
-    end
-
-    "Closes output files in worker nodes"
-    function close_output_files(name::String)
-        eval(Main,:(close(fastqo1)))
-        eval(Main,:(close(fastqo2)))
-        eval(Main,:(close(fastqo_s)))
-        eval(Main,:(close(fastqo_d)))
-    end
-
-    "Set  output file names"
-    function set_output_files(name::String)
-        global suffix = "_"*string(myid()-1)
-        global n1=split(name,"\n")[1]
-        eval(Main,:(fastqo1_f=n1*suffix))
-        eval(Main,:(fastqo1_f_all=n1))
-        global n2=split(name,"\n")[2]
-        eval(Main,:(fastqo2_f=n2*suffix))
-        eval(Main,:(fastqo2_f_all=n2))
-        global n3=split(name,"\n")[3]
-        eval(Main,:(fastqo_s_f=n3*suffix))
-        eval(Main,:(fastqo_s_f_all=n3))
-        global n4=split(name,"\n")[4]
-        eval(Main,:(fastqo_d_f=n4*suffix))
-        eval(Main,:(fastqo_d_f_all=n4))
-    end
-
-
-
-
-
-
-    # Indicate output files for worker nodes and open files
-    Files_output = convert(SharedArray,collect(join([fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f],"\n")))
-    @sync for (i, p) in enumerate(workers())
-        @spawnat p open_output_files(String(Files_output))
-    end
-
-    @sync for (i, p) in enumerate(workers())
-        @spawnat p open_output_files(String(Files_output))
-    end
-
-
-
-
-
-
-
-
-    debug_id="ST-E00243:413:HKCCHCCXY:7:2103:16234:11435"
-    debug=false
+    debug_id="ST-E00243:412:HKCGMCCXY:1:1120:14357:35432"
+    debug=true
 
     #Counters for specific pairs
     ct_all = convert(SharedArray, zeros(Int64, nworkers()))
@@ -219,51 +149,251 @@ function trim_polyA_from_files(
     ct_pair_with_proper_polyA = convert(SharedArray, zeros(Int64, nworkers()))
     ct_pair_with_discarded_polyA = convert(SharedArray, zeros(Int64, nworkers()))
 
-    tic()
-    @sync @parallel for records in collect(zip(collect(FASTQ.Reader(file_stream1)), collect(FASTQ.Reader(file_stream2)))) #@sync @parallel
-        trim_polyA_from_fastq_pair(
-                                    records[1],
-                                    records[2],
-                                    prefixes,
-                                    minimum_not_polyA,
-                                    minimum_polyA_length,
-                                    maximum_non_A_symbols,
-                                    maximum_distance_with_prefix_database,
-                                    minimum_poly_A_between,
-                                    include_polyA,
-                                    ct_all,
-                                    ct_pair_without_polyA,
-                                    ct_pair_with_proper_polyA,
-                                    ct_pair_with_discarded_polyA,
-                                    debug=debug
-                                    )
+
+    const fastqpairs = RemoteChannel(()->Channel{ Array{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1} }(100));
+    const fastqo_1_2_s_d=RemoteChannel(()->Channel{Tuple{String,String,String,String} }(100));
+
+    @everywhere function trim_polyA_from_fastq_pair_pararell(
+            fastq_pairs::RemoteChannel{Channel{Array{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1}}},
+            fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
+            ct_all::SharedArray{Int64,1},
+            ct_pair_without_polyA::SharedArray{Int64,1},
+            ct_pair_with_proper_polyA::SharedArray{Int64,1},
+            ct_pair_with_discarded_polyA::SharedArray{Int64,1},
+            prefixes::Array{String,1},
+            minimum_not_polyA::Int64,
+            minimum_polyA_length::Int64,
+            maximum_non_A_symbols::Int64,
+            maximum_distance_with_prefix_database::Int64,
+            minimum_poly_A_between::Int64,
+            include_polyA::Bool;
+            debug_id="None",
+            debug=false
+            )
+        while true
+            fastq1_b=IOBuffer()
+            fastq2_b=IOBuffer()
+            fastq_s_b=IOBuffer()
+            fastq_d_b=IOBuffer()
+            for   (fastq1, fastq2) in take!(fastq_pairs)
+                ct_all[(myid()-1)] += 1
+                has_proper_polyA=false
+                polyA_detected=false
+
+                if debug_id == FASTQ.identifier(fastq1)
+                    debug=true
+                else
+                    debug=false
+                end
+
+
+
+                fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
+                                                                fastq1,
+                                                                fastq2,
+                                                                prefixes,
+                                                                minimum_not_polyA,
+                                                                minimum_polyA_length,
+                                                                maximum_non_A_symbols,
+                                                                maximum_distance_with_prefix_database,
+                                                                minimum_poly_A_between,
+                                                                debug_id=debug_id,
+                                                                debug=debug
+                                                                )
+
+                if debug
+                    println("trim_polyA_from_fastq_pair output for $debug_id")
+                    println("fqo_trimmed:\n $fqo_trimmed \n, has_proper_polyA: $has_proper_polyA, polyA_detected: $polyA_detected")
+                end
+
+                if !polyA_detected
+            		ct_pair_without_polyA[(myid()-1)] += 1
+                    println(fastq1_b,fastq1)
+                    println(fastq2_b,fastq2)
+                else
+                    a=1
+                    if has_proper_polyA
+                        println(fastq_s_b,fqo_trimmed)
+            			ct_pair_with_proper_polyA[(myid()-1)] += 1
+                        #get reverse complement of the polyA read
+                        if include_polyA
+                            name=FASTQ.identifier(fqo_trimmed)
+                            description=FASTQ.description(fqo_trimmed)
+                            rev_quality=reverse(FASTQ.quality(fqo_trimmed))
+                            rev_seq=BioSequences.reverse_complement!(FASTQ.sequence(fqo_trimmed))
+                            fqo_trimmed_rev=FASTQ.Record(name, description, rev_seq, rev_quality)
+                            println(fastq1_b,fqo_trimmed)
+                            println(fastq2_b,fqo_trimmed_rev)
+                        end
+                    else
+
+                        println(fastq_d_b,fastq1)
+            			ct_pair_with_discarded_polyA[(myid()-1)] += 1
+                    end
+                end
+            end
+
+            #write out
+            fastq1_b_s=String(fastq1_b)
+            fastq2_b_s=String(fastq2_b)
+            fastq_s_b_s=String(fastq_s_b)
+            fastq_d_b_s=String(fastq_d_b)
+
+            if fastq1_b_s != ""   fastq1_b_z=String(transcode(GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
+            if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
+            if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
+            if fastq_d_b_s != ""   fastq_d_b_z=String(transcode(GzipCompressor,fastq_d_b_s)) else fastq_d_b_z="" end
+            put!(fastqo_1_2_s_d,(fastq1_b_z,fastq2_b_z,fastq_s_b_z,fastq_d_b_z))
+            close(fastq1_b)
+            close(fastq2_b)
+            close(fastq_s_b)
+            close(fastq_d_b)
+            end
+
+
     end
-    toc()
-    # close output files for worker nodes
-    Files_output = convert(SharedArray,collect(join([fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f],"\n")))
-    @sync for (i, p) in enumerate(workers())
-        @spawnat p close_output_files(String(Files_output))
-    end
 
 
-    pecentage_proper=round(100*sum(ct_pair_with_proper_polyA)/sum(ct_all),2)
-    pecentage_discarded=round(100*sum(ct_pair_with_discarded_polyA)/sum(ct_all),2)
-    println(STDERR,"Parsed reads: ",sum(ct_all))
-    println(STDERR," % of having proper polyA: $pecentage_proper")
-    println(STDERR," % of having discarded polyA: $pecentage_discarded")
-    println(STDERR,"Merging files produced by polyA")
 
-    for f in [fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f]
-        cmd_strings=Array{String,1}()
-        for (i, p) in enumerate(workers())
-            nr_file=p-1
-            fp="$f"*"_"*"$nr_file"
-            #println(p)
-            push!(cmd_strings," cat $fp >> $f ")
+
+
+    function put_fastq_for_processing(fastq1::String,fastq2::String,analysis_partition_size::Int64)
+        file_stream1=open(fastq1,"r")
+        if fastq1[length(fastq1)-2:end] == ".gz"
+            file_stream1=GzipDecompressorStream(file_stream1)
         end
-        cmd_string=join(cmd_strings, " ; ")*" ; wait "
-        run(`bash -c $cmd_string`)
+        file_stream2=open(fastq2,"r")
+        if fastq2[length(fastq2)-2:end] == ".gz"
+            file_stream2=GzipDecompressorStream(file_stream2)
+        end
+        for records_pair in partition(zip(FASTQ.Reader(file_stream1),FASTQ.Reader(file_stream2)),analysis_partition_size)
+            ct_jobs+=1 # global jobs counter
+            #println("putted $ct_jobs ")
+            put!(fastqpairs,collect(records_pair))
+        end
+        jub_submision_finished=true
     end
+
+    @schedule put_fastq_for_processing(fastq1,fastq2,analysis_partition_size)
+
+
+
+
+
+
+    for p in workers() # start tasks on the workers to process requests in parallel
+
+              @async remote_do(trim_polyA_from_fastq_pair_pararell, p,
+                                              fastqpairs,
+                                              fastqo_1_2_s_d,
+                                              ct_all,
+                                              ct_pair_without_polyA,
+                                              ct_pair_with_proper_polyA,
+                                              ct_pair_with_discarded_polyA,
+                                              prefixes,
+                                              minimum_not_polyA,
+                                              minimum_polyA_length,
+                                              maximum_non_A_symbols,
+                                              maximum_distance_with_prefix_database,
+                                              minimum_poly_A_between,
+                                              include_polyA;
+                                              debug=debug,
+                                              debug_id=debug_id
+                                              )
+
+    end
+    ctout=0
+
+
+
+    while  !((ctout == ct_jobs) & jub_submision_finished) || ((ctout==0) && (ct_jobs==0))# print out results
+        ctout+=1
+        fastqo1_s,fastqo2_s,fastqo_s_s,fastqo_d_s  = take!(fastqo_1_2_s_d)
+        write(fastqo1,fastqo1_s)
+        write(fastqo2,fastqo2_s)
+        write(fastqo_s,fastqo_s_s)
+        write(fastqo_d,fastqo_d_s)
+        if mod(ctout*analysis_partition_size,1000)==0
+            print(STDERR, "Parsed reads: ",sum(ct_all),
+            " without polyA: ",sum(ct_pair_without_polyA),
+            " with proper polyA: ",sum(ct_pair_with_proper_polyA),
+            " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
+        end
+    end
+    print(STDERR, "Parsed reads: ",sum(ct_all),
+    " without polyA: ",sum(ct_pair_without_polyA),
+    " with proper polyA: ",sum(ct_pair_with_proper_polyA),
+    " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\n")
+
+
+    close(fastqo1)
+    close(fastqo2)
+    close(fastqo_s)
+    close(fastqo_d)
+
+
+
+
+
+    # function fill_with_fastq_pairs(n)
+    #    for i in 1:n
+    #        put!(jobs, i)
+    #    end
+    # end
+    #
+    #     # println(typeof(records_pairs))
+    #     # exit()
+    #     # println("iter within")
+    #     # for p in records_pairs
+    #     #     println("-----")
+    #     #     println(p)
+    #     #     println(typeof(p))
+    #     # end
+    #     # exit()
+    #     #records_pairs SubArray{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1,Array{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1},Tuple{UnitRange{Int64}},true}
+    #
+    #     trim_polyA_from_fastq_pairs(
+    #                                 records_pairs,
+    #                                 prefixes,
+    #                                 minimum_not_polyA,
+    #                                 minimum_polyA_length,
+    #                                 maximum_non_A_symbols,
+    #                                 maximum_distance_with_prefix_database,
+    #                                 minimum_poly_A_between,
+    #                                 include_polyA,
+    #                                 ct_all,
+    #                                 ct_pair_without_polyA,
+    #                                 ct_pair_with_proper_polyA,
+    #                                 ct_pair_with_discarded_polyA,
+    #                                 debug=debug
+    #                                 )
+    # end
+    #
+    # # close output files for worker nodes
+    # Files_output = convert(SharedArray,collect(join([fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f],"\n")))
+    # @sync for (i, p) in enumerate(workers())
+    #     @spawnat p close_output_files(String(Files_output))
+    # end
+    #
+    #
+    # pecentage_proper=round(100*sum(ct_pair_with_proper_polyA)/sum(ct_all),2)
+    # pecentage_discarded=round(100*sum(ct_pair_with_discarded_polyA)/sum(ct_all),2)
+    # println(STDERR,"Parsed reads: ",sum(ct_all))
+    # println(STDERR," % of having proper polyA: $pecentage_proper")
+    # println(STDERR," % of having discarded polyA: $pecentage_discarded")
+    # println(STDERR,"Merging files produced by polyA")
+    #
+    # for f in [fastqo1_f,fastqo2_f,fastqo_s_f,fastqo_d_f]
+    #     cmd_strings=Array{String,1}()
+    #     for (i, p) in enumerate(workers())
+    #         nr_file=p-1
+    #         fp="$f"*"_"*"$nr_file"
+    #         #println(p)
+    #         push!(cmd_strings," cat $fp >> $f ")
+    #     end
+    #     cmd_string=join(cmd_strings, " ; ")*" ; wait "
+    #     run(`bash -c $cmd_string`)
+    # end
 
 
 
@@ -336,6 +466,7 @@ function main(args)
     minimum_polyA_length=parsed_args["minimum-polyA-length"],
     number_of_workers=parsed_args["processes"],
     use_cached_results=parsed_args["use-precalculated-reference-transcripts-prefixes"])
+    tic()
     trim_polyA_from_files(
         parsed_args["fastq-f"],
         parsed_args["fastq-r"],
@@ -351,6 +482,7 @@ function main(args)
         4, # minimum_poly_A_between
         parsed_args["incude-polyA-in-output"]
         )
+    toc()
 
 
 
