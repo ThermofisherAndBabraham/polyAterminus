@@ -1,0 +1,6 @@
+channels:
+ - conda-forge
+ - bioconda
+dependencies:
+ - python=2.7.9
+ - rseqc=2.6.2=0

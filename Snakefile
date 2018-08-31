@@ -70,7 +70,7 @@ target = []
 #            output_dir + "/fastqc_report_processed_reads_data"
 #           ]
 
-target += [",".join(expand("{tmp_dir}/{stem}_PolyA.fastq.gz", \
+target += [",".join(expand("{tmp_dir}/{stem}_gene_body_coverage.geneBodyCoverage.curves.png", \
                         stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 #                        stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 rule target:
@@ -185,15 +185,16 @@ else:
 
 # ------------------------------ analysis of 3' coverages ----------------- #
 #
-# rule  RSeQC_gene_body_coverage:
-#     input: bam = ["{tmp_dir}/{stem}_polyA_sorted.bam", \
-#                   "{tmp_dir}/{stem}_polyA_sorted.bam.bai"],
-#            bed = config["annotation_files_prefix"]+".bed"
-#
-#     output: "{tmp_dir}/{stem}_gene_body_coverage.geneBodyCoverage.curves.png"
-#     params: prefix="{tmp_dir}/{stem}_gene_body_coverage"
-#     params: sample = "{stem}"
-#     shell: "./scripts/geneBody_coverage_absolute.py -l 600 -i {input.bam[0]} -r {input.bed} -f png -o {params.prefix}"
+rule  RSeQC_gene_body_coverage:
+    input: bam = ["{tmp_dir}/{stem}_polyA_sorted.bam", \
+                  "{tmp_dir}/{stem}_polyA_sorted.bam.bai"],
+           bed = config["annotation_files_prefix"]+".bed"
+
+    output: "{tmp_dir}/{stem}_gene_body_coverage.geneBodyCoverage.curves.png"
+    params: prefix="{tmp_dir}/{stem}_gene_body_coverage"
+    conda:
+        "envs/rseqc.yaml"
+    shell: "python2 ./scripts/geneBody_coverage_absolute.py -l 600 -i {input.bam[0]} -r {input.bed} -f png -o {params.prefix}"
 #
 # rule  RSeQC_read_distribution:
 #     input: bam = ["{tmp_dir}/{stem}_polyA_sorted.bam", \
@@ -211,42 +212,42 @@ rule  gtfToBed:
   output: config["annotation_files_prefix"]+".bed"
   shell: " ./scripts/gtf2bed.pl {input} > {output}"
 #
-# rule IndexPolyA:
-#     input:  "{tmp_dir}/{stem}_polyA_sorted.bam"
-#     output: "{tmp_dir}/{stem}_polyA_sorted.bam.bai"
-#     params:  threads = config["threads"]
-#     threads: max_threads
-#     shell: "sambamba index -p -t{params.threads} {input[0]}"
+rule IndexPolyA:
+    input:  "{tmp_dir}/{stem}_polyA_sorted.bam"
+    output: "{tmp_dir}/{stem}_polyA_sorted.bam.bai"
+    params:  threads = config["threads"]
+    threads: max_threads
+    shell: "sambamba index -p -t{params.threads} {input[0]}"
 #
-# rule sortByNamePolyA:
-#     input: "{tmp_dir}/{stem}_polyA.bam"
-#     output: "{tmp_dir}/{stem}_polyA_sorted.bam"
-#     params: temp_dir_sambamba = config["scratch"],
-#             threads = config["threads"]
-#     threads: max_threads
-#     shell: "sambamba sort  --tmpdir={params.temp_dir_sambamba} -p " +
-#            "-t{params.threads} -o {output[0]} {input[0]}"
-#
-# rule runSTARonPolyA:
-#     input: fastq="{tmp_dir}/{stem}_R1_001subs_polyAmarked.fastq",
-#                genomeDir=config["genomic_dna_ercc_prefix"]+"_STAR_annotation",
-#                genomeAnnotationFile=config["genomic_dna_ercc_prefix"] + \
-#                                 "_STAR_annotation/Genome"
-#     threads: config["threads_star"]
-#     params: prefix = "{tmp_dir}/{stem}",
-#             starPrefix = "{tmp_dir}/{stem}Aligned.out",
-#             tmp = config["scratch"]+"/tmp_STAR_{stem}"
-#     output: "{tmp_dir}/{stem}_polyA.bam","{tmp_dir}/{stem}Log.final.out" #,"{tmp_dir}/{stem}_starTemp"
-#     run :
-#             cmd = "STAR --outTmpDir %s  --runThreadN %i " %(params.tmp, threads)
-#             cmd += "--genomeDir %s --runMode alignReads " %(input.genomeDir)
-#             cmd += "--outSAMunmapped Within --outFileNamePrefix %s " %(params.prefix)
-#             cmd += "--readFilesIn %s  --genomeLoad NoSharedMemory " %(input.fastq)
-#             cmd += "--outSAMstrandField intronMotif  --outSAMattributes All  "
-#             cmd += " --outSAMtype BAM Unsorted --chimSegmentMin  20  " # --chimJunctionOverhangMin 20-outFilterMultimapNmax 20   --outFilterMismatchNmax 999  --outFilterMismatchNoverReadLmax 0.04   --alignIntronMin 20   --alignIntronMax 1000000   --alignMatesGapMax 1000000   --alignSJoverhangMin 8   --alignSJDBoverhangMin 1 --sjdbScore 1 "
-#             cmd += " ; mv %s.bam %s " %(params.starPrefix, output[0])
-#             print(cmd)
-#             os.system(cmd)
+rule sortByNamePolyA:
+    input: "{tmp_dir}/{stem}_polyA.bam"
+    output: "{tmp_dir}/{stem}_polyA_sorted.bam"
+    params: temp_dir_sambamba = config["scratch"],
+            threads = config["threads"]
+    threads: max_threads
+    shell: "sambamba sort  --tmpdir={params.temp_dir_sambamba} -p " +
+           "-t{params.threads} -o {output[0]} {input[0]}"
+
+rule runSTARonPolyA:
+    input: fastq="{tmp_dir}/{stem}_PolyA.fastq.gz",
+               genomeDir=config["genomic_dna_ercc_prefix"]+"_STAR_annotation",
+               genomeAnnotationFile=config["genomic_dna_ercc_prefix"] + \
+                                "_STAR_annotation/Genome"
+    threads: config["threads_star"]
+    params: prefix = "{tmp_dir}/{stem}",
+            starPrefix = "{tmp_dir}/{stem}Aligned.out",
+            tmp = config["scratch"]+"/tmp_STAR_{stem}"
+    output: "{tmp_dir}/{stem}_polyA.bam","{tmp_dir}/{stem}Log.final.out" #,"{tmp_dir}/{stem}_starTemp"
+    run :
+            cmd = "STAR --outTmpDir %s  --runThreadN %i " %(params.tmp, threads)
+            cmd += "--genomeDir %s --runMode alignReads " %(input.genomeDir)
+            cmd += "--outSAMunmapped Within --outFileNamePrefix %s " %(params.prefix)
+            cmd += "--readFilesIn %s  --readFilesCommand zcat --genomeLoad NoSharedMemory " %(input.fastq)
+            cmd += "--outSAMstrandField intronMotif  --outSAMattributes All  "
+            cmd += " --outSAMtype BAM Unsorted --chimSegmentMin  20  " # --chimJunctionOverhangMin 20-outFilterMultimapNmax 20   --outFilterMismatchNmax 999  --outFilterMismatchNoverReadLmax 0.04   --alignIntronMin 20   --alignIntronMax 1000000   --alignMatesGapMax 1000000   --alignSJoverhangMin 8   --alignSJDBoverhangMin 1 --sjdbScore 1 "
+            cmd += " ; mv %s.bam %s " %(params.starPrefix, output[0])
+            print(cmd)
+            os.system(cmd)
 #
 rule trimPolyAReads:
         input:"{tmp_dir}/{stem}_R1_001subs.fastq.gz" , "{tmp_dir}/{stem}_R2_001subs.fastq.gz"
