@@ -57,20 +57,8 @@ max_picard_t = config["memory"]
 
 target = []
 
-# if config["trimming"]:
-#     target += [
-#                output_dir + "/trimming_report.html",
-#                output_dir + "/trimming_report_data"
-#                ]
-#
-# target += [
-#            output_dir + "/fastqc_report_raw_reads.html",
-#            output_dir + "/fastqc_report_raw_reads_data",
-#            output_dir + "/fastqc_report_processed_reads.html",
-#            output_dir + "/fastqc_report_processed_reads_data"
-#           ]
 
-target += [",".join(expand("{tmp_dir}/{stem}_gene_body_coverage.geneBodyCoverage.curves.png", \
+target += [",".join(expand("{tmp_dir}/{stem}_polyA_sorted.bam", \
                         stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 #                        stem=cls, tmp_dir=tmp_dir)) for cls in (stems)]
 rule target:

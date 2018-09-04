@@ -1,18 +1,58 @@
 ## Description
 
-Purpose of the work flow is to run complete primary and secondary analysis of RNA sequencing with Illumina machines and determine 3' ends of transcripts, PolyA length.
+Purpose of the work flow is to run RNA-seq trimming and alignment to a given reference steps and perform initial polyadenylation sites' analysis.
 
 ## Dependencies
 
-* `julia v0.6`
-* `snakemake 4.5.0`
-* `BBMAP 36.92`
-* `STAR 2.5.3a`
-* `fastqc  v0.11.5`
-* `multiqc 1.5`
-* `AdapterRemoval 2.2.2`
-* `seqkit 0.7.0`
+* `julia v0.6.1`
+* `snakemake 5.2.2`
+* `BBMAP 38.22`
+* `STAR 2.6.1a`
+* `seqkit 0.8.1`
 * `sambamba 0.6.6`
+
+
+You can install  the dependencies manually or through conda environment as indicated below. If you choose to install the required software  manually please directly to the step 6 of the Workflow setup.
+
+## Workflow setup
+
+1. Install `conda`:
+```bash
+   wget -P miniconda https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh &&
+   chmod 755 ./miniconda/Miniconda3-latest-Linux-x86_64.sh &&
+   ./miniconda/Miniconda3-latest-Linux-x86_64.sh &&
+```
+
+2. Add path of `miniconda` to `.bashrc` if not selected option to add automatically during installation:
+```bash
+   cd ~/ && pth=$(pwd) &&
+   echo "PATH=$PATH:$pth/miniconda3/bin" >> ~/.bashrc
+```
+
+3. Add channels to conda:
+```bashr
+    conda config --add channels conda-forge
+    conda config --add channels bioconda
+    conda config --add channels anaconda
+    conda config --add channels r
+```
+2. Create your `conda` environment:
+ ```bash
+    conda env create -f envs/3EndD.yaml -n 3EndD
+ ```
+
+5. Activate created environment:
+```bash
+   source activate 3EndD
+```
+
+6. Install the required julia packages:
+```bash
+   julia scripts/install_pkgs.jl
+```
+
+
+
 
 ## Notes for `config.yaml`
 
@@ -29,7 +69,3 @@ Purpose of the work flow is to run complete primary and secondary analysis of RN
 - [ ]  Tests for `MapPolyA.jl`
 - [ ]  Check strands after parsing Bam in `MapPolyA.jl`
 - [ ]  Test `rmdups()` in `MapPolyA.jl`
-
-## Install Julia Pkgs
-
-* Run script: `julia scripts/install_pkgs.jl`

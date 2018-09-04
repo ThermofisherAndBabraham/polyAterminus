@@ -1,8 +1,0 @@
-channels:
- - conda-forge
- - anaconda
- - r
- - bioconda
-dependencies:
- - snakemake=4.0.0
- - julia=0.6.1=blas_openblas_202
