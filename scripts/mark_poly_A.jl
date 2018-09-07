@@ -28,24 +28,30 @@ Arguments:
     number_of_workers - number of julia processes
     use_cached_results - use already calculated results
 """
-function get_polyA_prefixes_from_file(file::String;
+function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     minimum_not_polyA::Int64=20,
     minimum_polyA_length::Int64=20,
     number_of_workers::Int64=4,
     use_cached_results::Bool=true)
 
-
     #file for caching
-    jldFile=file*"_exracted_polyA_prefixes.jdl"
+    jldFile="exracted_polyA_prefixes.jdl"
 
     if !isfile(jldFile) | !use_cached_results
-
         # Open files and prepare decompression stream
-
-        file_stream=open(file,"r")
-    	if file[length(file)-2:end] == ".gz"
-        	file_stream=GzipDecompressorStream(file_stream)
-    	end
+        if (file != nothing)
+            file_stream=open(file,"r")
+        	if file[length(file)-2:end] == ".gz"
+            	file_stream=GzipDecompressorStream(file_stream)
+        	end
+            collectedFasta = collect(FASTA.Reader(file_stream))
+            close(file_stream)
+        elseif (gff != nothing && genomeFa != nothing)
+            collectedFasta = get_transcripts_from_gff(genomeFa, gff)
+        else
+            println(STDERR,"ERROR! Transcripts files")
+        end
+        println("Colleceted",collectedFasta)
         # Start julia worker processors
 
     	#Crate counter for progress nonitoring
@@ -53,10 +59,10 @@ function get_polyA_prefixes_from_file(file::String;
     	# Arry to collect results for output
         all_result=Array{String,1}()
         #Parse transcripts
-        time= @elapsed result= @parallel  (vcat) for record in collect(FASTA.Reader(file_stream))
+        time= @elapsed result= @parallel  (vcat) for record in collectedFasta
             get_polyA_prefixes(record,minimum_not_polyA,
                               minimum_polyA_length,counter)
-         end
+        end
     	#get unique prefixes
         all_result=unique(result)
         number_of_unque_prefixes=length(all_result)
@@ -67,7 +73,6 @@ function get_polyA_prefixes_from_file(file::String;
             println(STDERR, "Colected unique polyA prefixes in known transcripts are saved in file $jldFile")
         end
 
-    	close(file_stream)
     else
         println(STDERR ,"Loading colected unique polyA prefixes in known transcriptsfrom  file $jldFile")
         data = load(jldFile)
@@ -430,7 +435,15 @@ function main(args)
             default = 10 #10
         "--reference-transcripts","-r"
             help="Reference transcripts in fasta format"
-            required = true
+            required = false
+            arg_type = String
+        "--reference-genome","-g"
+            help="Reference genome in fasta format"
+            required = false
+            arg_type = String
+        "--reference-gff","-f"
+            help="Reference gff3 file"
+            required = false
             arg_type = String
 
         "--use-precalculated-reference-transcripts-prefixes","-c"
@@ -460,28 +473,30 @@ function main(args)
     eval(macroexpand(quote @everywhere using PolyAAnalysis end))
 
 
-
+    println(parsed_args["reference-transcripts"], parsed_args["reference-genome"], parsed_args["reference-gff"])
     polyA_prefixes=get_polyA_prefixes_from_file(parsed_args["reference-transcripts"],
+    parsed_args["reference-genome"],
+    parsed_args["reference-gff"],
     minimum_not_polyA=parsed_args["minimum-length"],
     minimum_polyA_length=parsed_args["minimum-polyA-length"],
     number_of_workers=parsed_args["processes"],
     use_cached_results=parsed_args["use-precalculated-reference-transcripts-prefixes"])
     tic()
-    trim_polyA_from_files(
-        parsed_args["fastq-f"],
-        parsed_args["fastq-r"],
-        polyA_prefixes,
-        parsed_args["processes"],
-        parsed_args["output"],
-
-        parsed_args["minimum-length"],
-        parsed_args["minimum-polyA-length"],
-        1, # maximum_non_A_symbols::Int64,
-        1, # minimum_distance_from_non_poly::Int64
-        3,  # maximum_distance_with_prefix_database
-        4, # minimum_poly_A_between
-        parsed_args["incude-polyA-in-output"]
-        )
+    # trim_polyA_from_files(
+    #     parsed_args["fastq-f"],
+    #     parsed_args["fastq-r"],
+    #     polyA_prefixes,
+    #     parsed_args["processes"],
+    #     parsed_args["output"],
+    #
+    #     parsed_args["minimum-length"],
+    #     parsed_args["minimum-polyA-length"],
+    #     1, # maximum_non_A_symbols::Int64,
+    #     1, # minimum_distance_from_non_poly::Int64
+    #     3,  # maximum_distance_with_prefix_database
+    #     4, # minimum_poly_A_between
+    #     parsed_args["incude-polyA-in-output"]
+    #     )
     toc()
 
 
