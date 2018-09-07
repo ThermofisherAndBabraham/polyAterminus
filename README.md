@@ -48,10 +48,15 @@ You can install  the dependencies manually or through conda environment as indic
 
 6. Install the required julia packages:
 ```bash
-   julia scripts/install_pkgs.jl
+   bash envs/build_julia_pkgs.sh
 ```
 
+## Analysis
 
+* Run `snakemake`:
+```bash
+    snakemake config.yaml -j 24 -k -p
+```
 
 
 ## Notes for `config.yaml`
@@ -59,7 +64,7 @@ You can install  the dependencies manually or through conda environment as indic
 * `Threads`: Consider is as how many parallel programs should be run on your PC.
 * `memory`: restricts parallelism. Consider as threads.
 * `memory_java`: for human 120 GB is recommended.
-* `threads_julia`: usually no more than 6.
+* `threads_julia`: usually no more than 8.
 * `threads_star`:
 
 ## TODO
@@ -69,3 +74,4 @@ You can install  the dependencies manually or through conda environment as indic
 - [ ]  Tests for `MapPolyA.jl`
 - [ ]  Check strands after parsing Bam in `MapPolyA.jl`
 - [ ]  Test `rmdups()` in `MapPolyA.jl`
+- [ ]  Align all rule names.
