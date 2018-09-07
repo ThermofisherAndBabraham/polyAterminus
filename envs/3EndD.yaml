@@ -137,3 +137,5 @@ dependencies:
   - ratelimiter=1.2.0=py35_0
   - suitesparse=4.5.6=blas_openblash55dcaef_201
   - xmlrunner=1.7.7=py_0
+  - fastqc=0.11.7
+  - multiqc=1.6a0
