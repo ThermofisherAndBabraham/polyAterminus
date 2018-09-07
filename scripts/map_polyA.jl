@@ -11,11 +11,10 @@ function main(args)
     arg_parse_settings = ArgParseSettings(description="Calculates uncovered windows number and GC bias.")
     @add_arg_table arg_parse_settings begin
         "--bam", "-b"
-            nargs = '+'
             arg_type = String
-            help = "Bam files separated by spaces."
+            help = "Bam file."
             required = true
-            dest_name = "bams"
+            dest_name = "bam"
         "--out", "-o"
             arg_type = String
             help = "Prefix of output file."
@@ -34,32 +33,32 @@ function main(args)
     gffcollection = ParseGFF3(parsed_args["gff3file"])
     println("Parsed gff: ")
     toc()
-    
-    for bam in parsed_args["bams"]
-        tic()
-        treads, passreads, pareads, pclus = BamRead(bam)
-        println("Parsed bam $bam: ")
-        toc()
-        tic()
-        statdframe = PolACalculus(pclus)
-        println("Gen dataframe: ")
-        toc()
-        statdframe[:Smaple] = basename(bam)
-        statdframe[:TotalReads] = treads
-        statdframe[:PassedReads] = passreads
-        statdframe[:PolyAReads] = pareads
-        statdframe = sort!(statdframe, [:Chrmosome, :Position])
-        WrFrame(parsed_args["outfile"]*"_detected_polyA.tsv", statdframe, '\t')
-        tic()
-        intervalcolection = GetIntervalSet(statdframe)
-        println("Got intervals in: ")
-        toc()
-        tic()
-        joinedcollection = ItsectCollection(intervalcolection, gffcollection)
-        println("Intersected in: ")
-        toc()
-        WrFrame(parsed_args["outfile"]*"_mapped_polyA.bed", joinedcollection, '\t')
-    end
+
+    bam = parsed_args["bam"]
+    tic()
+    treads, passreads, pareads, pclus = BamRead(bam)
+    println("Parsed bam $bam: ")
+    toc()
+    tic()
+    statdframe = PolACalculus(pclus)
+    println("Gen dataframe: ")
+    toc()
+    statdframe[:Smaple] = basename(bam)
+    statdframe[:TotalReads] = treads
+    statdframe[:PassedReads] = passreads
+    statdframe[:PolyAReads] = pareads
+    statdframe = sort!(statdframe, [:Chrmosome, :Position])
+    WrFrame(parsed_args["outfile"]*"_detected_polyA.tsv", statdframe, '\t')
+    tic()
+    intervalcolection = GetIntervalSet(statdframe)
+    println("Got intervals in: ")
+    toc()
+    tic()
+    joinedcollection = ItsectCollection(intervalcolection, gffcollection)
+    println("Intersected in: ")
+    toc()
+    WrFrame(parsed_args["outfile"]*"_mapped_polyA.bed", joinedcollection, '\t')
+
 end
 
 main(ARGS)
