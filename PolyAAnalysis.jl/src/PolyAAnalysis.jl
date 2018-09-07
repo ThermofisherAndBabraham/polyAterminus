@@ -16,6 +16,7 @@ export
     trim_polyA_file_records,
     trim_polyA_from_fastq_record,
     get_polyA_prefixes,
+    get_transcripts_from_gff,
     detect_polyA_in_a_string,
     extend_poly_A,
     trim_polyA_3end,
@@ -50,5 +51,6 @@ import BufferedStreams
 
 include("MapPolyA.jl")
 include("TrimmPolyA.jl")
+include("ParseGFF.jl")
 
 end  # module PolyAAnalysis
