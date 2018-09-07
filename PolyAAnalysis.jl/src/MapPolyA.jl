@@ -288,9 +288,10 @@ function rmdups(dframe::DataFrame)::DataFrame
 
     df = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
-    d = Dict("gene"=>8,"transcript"=>7,"exon"=>6,
-             "CDS"=>5,"UTR"=>4,"start_codon"=>3,
-             "stop_codon"=>2,"Selenocysteine"=>1)
+    d = Dict("gene"=>13, "transcript"=>12,"exon"=>11, "intron"=>10, "CDS"=>9,
+             "UTR"=>8, "three_prime_UTR"=>7, "five_prime_UTR"=>6,
+             "polyA_sequence"=>5, "polyA_site"=>4, "start_codon"=>3,
+             "stop_codon"=>2, "Selenocysteine"=>1)
 
     ct = Int64(0)
     ct2 = Int64(0)

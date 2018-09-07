@@ -8,59 +8,63 @@
 # Should be .fq.gz or .fastq.gz files. #
 ########################################
 
-input_dir: /media/root/ngs_nas3/testing_data_poly_A #/media/root/working_disk/data_RNA_seqone_sample/ #/media/root/ngs_nas3/testing_data_poly_A/ #testing_data #/media/root/working_disk/data_RNA_seqone_sample/
-tmp_dir: tmp
-output_dir: output
-scratch: tmp
-firts_strand_stem: Z4-Leg-2_S8
-
-###################
-# Fastqc options. #
-###################
-
-kmer_size: 5   # [5]
-
-############
-# Trimming #
-############
-
-trimming: bbduk  # [adapterremoval | empty]
-for_adapter: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA  # [AGATCGGAAGAGCACACGTCTGAACTCCAGTCA]
-rev_adapter: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT  # [AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT]
-min_read_length: 20                             # [20]
-max_read_length: 700                            # [700]
-trim_from_3end: 0 #AdapterRemoval, proramatically shorten reads, default 0
-quality_limit: 25                               # [25]
-maximum_n_count_in_reads: 1                     # [1]
-max_errors: 0.1                                 # [0.1]
-
-###############
-# Subsampling #
-###############
-
-subsample_to:
+INPUT-DIR: test_files #/media/root/ngs_nas3/testing_data_poly_A/
+TMP-DIR: tmp
+OUT-DIR: output
+SCRATCH: tmp
 
 #########################
 # CPU and memory params #
 #########################
-
-threads: 24
-memory: 8
-memory_java: 8
-threads_star: 8
-threads_julia: 8
-threads_flash: 8
-threads_marker: 6
-
+MACHINE:
+    threads: 24
+    memory: 8
+    threads_julia: 8
+    memory_java: 8
 
 ##############
 # References #
 ##############
-
-ercc_fasta: datasets/additional_data_RNA_seq/ERCC92.fa
-bbmap_ref: datasets/bbmap/two_short.fa
+REFERENCE: /media/root/ocean/Databases/hg38/GRCh38.primary_assembly.genome.fa
 polyA_ref: datasets/bbmap/polyA.fa
-transcripts_fasta: /media/root/ocean/Databases/hg38/gencode.v28.transcripts.fa.gz #testing_data/gencode.v28.transcripts_min27A.fasta
-reference_dna: /media/root/ocean/Databases/hg19/full_genome/genome.fa
-reference_gtf: /media/root/ocean/Databases/hg19/Encode_annotation/gencode.v19.annotation.gtf
-reference_for_subset: #datasets/additional_data_RNA_seq/ERCC92_withou_polyA.fa
+TRANSCRIPTS: /media/root/ocean/Databases/hg38/gencode.v28.transcripts.fa.gz
+GFF3: /media/root/ocean/Databases/hg38/gencode.v28.primary_assembly.annotation.gff3
+GTF: /media/root/ocean/Databases/hg38/gencode.v28.primary_assembly.annotation.gtf
+
+###################
+# Fastqc options. #
+###################
+FASTQC:
+    kmer_size: 5   # [5]
+
+############
+# Trimming #
+############
+BBDUK:
+    threads: 8
+    ref: datasets/bbmap/two_short.fa
+    ktrim: r
+    k: 23
+    mink: 11
+    hdist: 1
+    minlength: 10
+    maxns: 1
+    qtrim: r
+    trimq: 15
+    additional_params: "tpe tbo"
+
+###############
+# Subsampling #
+###############
+SUBSAMPLING:
+    run: False
+    subsample_to:
+
+#############
+# Alignment #
+#############
+MAPPING:
+    STAR:
+        threads: 24
+        chimSegmentMin: 20
+        additional_params: ""
