@@ -32,26 +32,32 @@ function main(args)
     parsed_args = parse_args(arg_parse_settings)
     tic()
     gffcollection = ParseGFF3(parsed_args["gff3file"])
-    println("Parsed gff: ", toc())
+    println("Parsed gff: ")
+    toc()
+    
     for bam in parsed_args["bams"]
         tic()
         treads, passreads, pareads, pclus = BamRead(bam)
-        println("Parsed bam $bam: ", toc())
+        println("Parsed bam $bam: ")
+        toc()
         tic()
         statdframe = PolACalculus(pclus)
-        println("Gen dataframe: ", toc())
+        println("Gen dataframe: ")
+        toc()
         statdframe[:Smaple] = basename(bam)
         statdframe[:TotalReads] = treads
         statdframe[:PassedReads] = passreads
         statdframe[:PolyAReads] = pareads
-        statdframe = sort!(statdframe, cols = [:Chrmosome, :Position])
+        statdframe = sort!(statdframe, [:Chrmosome, :Position])
         WrFrame(parsed_args["outfile"]*"_detected_polyA.tsv", statdframe, '\t')
         tic()
         intervalcolection = GetIntervalSet(statdframe)
-        println("Got intervals in: ", toc())
+        println("Got intervals in: ")
+        toc()
         tic()
         joinedcollection = ItsectCollection(intervalcolection, gffcollection)
-        println("Intersected in: ", toc())
+        println("Intersected in: ")
+        toc()
         WrFrame(parsed_args["outfile"]*"_mapped_polyA.bed", joinedcollection, '\t')
     end
 end

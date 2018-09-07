@@ -20,9 +20,9 @@ function BamRead(bam::String)
             if (flag&4 == 0) && (flag&256 == 0) && (flag&2048 == 0)
                 spl = split(BAM.tempname(record),":")
 
-                if flag&16 == 0 || flag&32 == 0
+                if flag&16 == 0
                     strness = "+"
-                elseif flag&16 == 16 || flag&32 == 32
+                elseif flag&16 == 16
                     strness = "-"
                 else
                     strness = "."
@@ -236,8 +236,8 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
         end
     end
 
-    sort!(dfn, rev=true, cols = [:Start, :End, :Name])
-    sort!(dfp, cols = [:Start, :End, :Name])
+    sort!(dfn, [:Start, :End, :Name], rev=true)
+    sort!(dfp, [:Start, :End, :Name])
 
     dfp = rmdups(dfp)
     dfn = rmdups(dfn)
