@@ -15,6 +15,7 @@ end
 include("MapPolyA.jl")
 end
 
-
-
+@testset "ParseGFF" begin
+include("ParseGFF.jl")
+end
 end #module TestPolyAanalsis
