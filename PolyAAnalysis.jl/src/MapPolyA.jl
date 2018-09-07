@@ -192,9 +192,9 @@ function GetIntervalSet(dframe::DataFrame)::IntervalCollection{String}
     for i in eachrow(dframe)
         if i[3] == "+"
             s = Strand('+')
-        elseif i[3] == '-'
+        elseif i[3] == "-"
             s = Strand('-')
-        elseif i[3] == '.'
+        elseif i[3] == "."
             s = Strand('.')
         else
             s = Strand('?')
