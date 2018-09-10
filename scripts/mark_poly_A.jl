@@ -49,9 +49,8 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
         elseif (gff != nothing && genomeFa != nothing)
             collectedFasta = get_transcripts_from_gff(genomeFa, gff)
         else
-            println(STDERR,"ERROR! Transcripts files")
+            println(STDERR,"ERROR! Missing transcripts or gff and reference files")
         end
-        println("Colleceted",collectedFasta)
         # Start julia worker processors
 
     	#Crate counter for progress nonitoring
@@ -482,21 +481,21 @@ function main(args)
     number_of_workers=parsed_args["processes"],
     use_cached_results=parsed_args["use-precalculated-reference-transcripts-prefixes"])
     tic()
-    # trim_polyA_from_files(
-    #     parsed_args["fastq-f"],
-    #     parsed_args["fastq-r"],
-    #     polyA_prefixes,
-    #     parsed_args["processes"],
-    #     parsed_args["output"],
-    #
-    #     parsed_args["minimum-length"],
-    #     parsed_args["minimum-polyA-length"],
-    #     1, # maximum_non_A_symbols::Int64,
-    #     1, # minimum_distance_from_non_poly::Int64
-    #     3,  # maximum_distance_with_prefix_database
-    #     4, # minimum_poly_A_between
-    #     parsed_args["incude-polyA-in-output"]
-    #     )
+    trim_polyA_from_files(
+        parsed_args["fastq-f"],
+        parsed_args["fastq-r"],
+        polyA_prefixes,
+        parsed_args["processes"],
+        parsed_args["output"],
+
+        parsed_args["minimum-length"],
+        parsed_args["minimum-polyA-length"],
+        1, # maximum_non_A_symbols::Int64,
+        1, # minimum_distance_from_non_poly::Int64
+        3,  # maximum_distance_with_prefix_database
+        4, # minimum_poly_A_between
+        parsed_args["incude-polyA-in-output"]
+        )
     toc()
 
 
