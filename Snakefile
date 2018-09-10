@@ -390,7 +390,7 @@ rule trim_polyA_reads:
         shell:
             "julia --depwarn=no scripts/mark_poly_A.jl  -i -p {threads} " +
             "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
-            "-c -r {params.gz} &> {log}"
+            "-c -r {params.gz} 2>&1 | tee -a  {log}"
 
 rule mapping_polyA:
     input:
