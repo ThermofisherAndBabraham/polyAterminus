@@ -28,7 +28,7 @@ export
     ParseRecord,
     GetIntervalSet,
     ItsectCollection,
-    rmdups!,
+    rmdups,
     WrFrame
 
 import BioAlignments: BAM
