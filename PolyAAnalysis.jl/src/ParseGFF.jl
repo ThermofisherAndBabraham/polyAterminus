@@ -16,7 +16,7 @@ Arguments:
 """
 function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.FASTA.Record,1}
 
-    #Reads Gff file generates dict chr => [transcriptsPositions]
+    # Reads Gff file generates dict chr => [transcriptsPositions]
     println("Reading GFF")
     reader = open(GFF3.Reader, gff)
     transDict = Dict{String,Array{String,1}}()
@@ -47,7 +47,7 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
             chr = string(GenomicFeatures.GFF3.seqid(record))
             currTrans = string(GenomicFeatures.GFF3.attributes(record, "ID")[1])
             strnd = string(GenomicFeatures.GFF3.strand(record))
-            #check if chr exist in dict
+            # Check if chr exist in dict
             if !(haskey(transDict,chr))
                 transDict[chr]=[]
             end
@@ -60,24 +60,34 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
             if (currTrans == GenomicFeatures.GFF3.attributes(record, "Parent")[1])
                 coordex = coordex * strPos * "-" * endPos * ","
             else
-                println(record)
                 println(STDERR,"ERROR! Exon before transcript.")
+                println(record)
             end
         end
     end
+    # Adds If exon was last record in gff3 file.
+    if (coordex != "")
+        coordex = coordex * strnd
+        if !(in(coordex, transDict[chr]))
+            push!(transDict[chr],coordex)
+            num = num + 1
+        else
+            ct+=1
+        end
+    end
+
     toc()
     println(STDERR,"Dublicated transcripts count in gff = ",ct)
     println(STDERR,"Number of transcripts in gff = ",num)
     close(reader)
 
     tic()
-    #Read ref genome FASTA File and optains transcripts sequences
+    # Read ref genome FASTA File and optains transcripts sequences
 
     file_stream=open(fa,"r")
     result= @parallel (vcat) for record in collect(FASTA.Reader(file_stream))
         get_transcripts_from_dict(record, transDict)
     end
-    println(result)
     toc()
     close(file_stream)
     return(result)
