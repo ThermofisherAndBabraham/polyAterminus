@@ -63,8 +63,8 @@ push!(outRecordsAll,recordOut)
 ##
 
 # Creating Temp Files (gff and fasta) for testing.
-f1 = tempname()
-file_stream = open(f1,"w")
+f1,file_stream = mktemp(tempdir())
+
 writer = GFF3.Writer(file_stream)
 write(writer,GFF3.Record(b"chr1	HAVANA	gene	1	100	.	+	.	ID=ENSG00000223972.5;gene_id=ENSG00000223972.5"))
 write(writer,GFF3.Record(b"chr1	HAVANA	transcript	1	100	.	+	.	ID=ENST00000456328.2;Parent=ENSG00000223972.5;gene_id=ENSG00000223972.5"))
@@ -103,8 +103,7 @@ write(writer,GFF3.Record(b"chr1	HAVANA	transcript	2	98	.	-	.	ID=ENST00000450300.
 write(writer,GFF3.Record(b"chr1	HAVANA	exon	2	98	.	-	.	ID=exon:ENST00000450300.2:1;Parent=ENST00000450300.2;gene_id=ENSG00000223972.5"))
 close(writer)
 
-f2 = tempname()
-file_stream = open(f2,"w")
+f2,file_stream = mktemp(tempdir())
 writer = FASTA.Writer(file_stream)
 write(writer,FASTA.Record("chr1", dna"TACTGCCTGCATAAGGAGAACGGAGTTGCCAAGGACGAAAGCGACTCTAGGTTCTAACCGTCGACTTTGGCGGAAAGGTTTCACTCAGGAAGCAGACACT"))
 close(writer)
