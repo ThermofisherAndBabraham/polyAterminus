@@ -78,9 +78,9 @@ rule all:
         expand(out + "/STAR/{stem}_polyA.bam", out=out, stem=stems),
         expand(out + "/STAR/{stem}Log.final.out", out=out, stem=stems),
         expand(out + "/MAPPED_POLYA/{stem}_detected_polyA.tsv", out=out, stem=stems),
-        expand(out + "/MAPPED_POLYA/{stem}_mapped_polyA.bed", out=out, stem=stems)
-        # out + "/fastqc_report_raw_reads.html",
-        # out + "/fastqc_report_processed_reads.html"
+        expand(out + "/MAPPED_POLYA/{stem}_mapped_polyA.bed", out=out, stem=stems),
+        out + "/fastqc_report_raw_reads.html",
+        out + "/fastqc_report_processed_reads.html"
 
 #############################################################################
 # ------------------------------ Analysis rules --------------------------- #
@@ -128,18 +128,16 @@ rule multi_qc:
         expand(tmp + "/{stem}_R1_001_fastqc.zip", stem=stems),
         expand(tmp + "/{stem}_R2_001_fastqc.zip", stem=stems)
     output:
-        out + "/fastqc_report_raw_reads.html",
-        out + "/fastqc_report_raw_reads_data"
+        out + "/fastqc_report_raw_reads.html"
     shell:
-        "multiqc {input} -o {out} -n fastqc_report_raw_reads"
+        "multiqc {input} -o {out} -n fastqc_report_raw_reads --force"
 
 rule multi_qc_pre:
     input:
         expand(tmp + "/{stem}_R1_001Trimmed_fastqc.zip", stem=stems),
         expand(tmp + "/{stem}_R2_001Trimmed_fastqc.zip", stem=stems)
     output:
-        out + "/fastqc_report_processed_reads.html",
-        out + "/fastqc_report_processed_reads_data"
+        out + "/fastqc_report_processed_reads.html"
     shell:
         "multiqc {input} -o {out} -n fastqc_report_processed_reads --force "
 

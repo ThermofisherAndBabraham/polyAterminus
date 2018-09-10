@@ -4,6 +4,10 @@ using BioSequences
 using Base.Test
 push!(LOAD_PATH, "../../")
 using DataFrames
+import GenomicFeatures: GFF3
+import GenomicFeatures: Interval
+import GenomicFeatures: Strand
+import GenomicFeatures: IntervalCollection
 using PolyAAnalysis
 
 @testset "PolyAtrimming" begin

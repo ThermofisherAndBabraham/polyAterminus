@@ -22,18 +22,20 @@ function BamRead(bam::String)
 
                 if flag&16 == 0
                     strness = "+"
+                    pos = BAM.rightposition(record)
                 elseif flag&16 == 16
                     strness = "-"
+                    pos = BAM.position(record)
                 else
                     strness = "."
                 end
 
-                if spl[2] == "A"
+                if spl[2] == "A" && strness != "."
                     pareads += 1
-                    rpos = BAM.rightposition(record)
-                    cps = rfname * "::" * string(rpos) * "::" * strness
+                    cps = rfname * "::" * string(pos) * "::" * strness
                     pclus = Clust!(pclus, cps, parse(Int16, spl[1]))
                 end
+
                 passreads += 1
             end
         end
@@ -192,9 +194,9 @@ function GetIntervalSet(dframe::DataFrame)::IntervalCollection{String}
     for i in eachrow(dframe)
         if i[3] == "+"
             s = Strand('+')
-        elseif i[3] == '-'
+        elseif i[3] == "-"
             s = Strand('-')
-        elseif i[3] == '.'
+        elseif i[3] == "."
             s = Strand('.')
         else
             s = Strand('?')
@@ -208,11 +210,16 @@ function GetIntervalSet(dframe::DataFrame)::IntervalCollection{String}
     return intcol
 end
 
-
+""" Function searches for overlaping intervals.
+"""
 function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFrame
 
-    dfp = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
-    dfn = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
+    dfp = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
+                    Counts=Int32[], Strand=String[], Feature=String[],
+                    Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
+    dfn = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
+                    Counts=Int32[], Strand=String[], Feature=String[],
+                    Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
     for i in eachoverlap(a, b)
         if strand(i[1]) == strand(i[2])
@@ -242,41 +249,12 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
     dfp = rmdups(dfp)
     dfn = rmdups(dfn)
 
-    ct = Int64(0)
-    l = size(dfn)[1]
-
-    for (i, x) in enumerate(eachrow(dfn))
-        ct += 1
-        if i+1 <= l
-            if x[4] == eachrow(dfn)[i+1][4]
-                x[4] = x[4]*".$ct"
-            else
-                x[4] = x[4]*".$ct"
-                ct = 0
-            end
-        else
-            x[4] = x[4]*".$ct"
-            ct = 0
-        end
-    end
+    enumeratenames!(dfn)
 
     ct = Int64(0)
     l = size(dfp)[1]
 
-    for (i, x) in enumerate(eachrow(dfp))
-        ct += 1
-        if i+1 <= l
-            if x[4] == eachrow(dfp)[i+1][4]
-                x[4] = x[4]*".$ct"
-            else
-                x[4] = x[4]*".$ct"
-                ct = 0
-            end
-        else
-            x[4] = x[4]*".$ct"
-            ct = 0
-        end
-    end
+    enumeratenames!(dfp)
 
     df = vcat(dfp, dfn)
 
@@ -284,9 +262,41 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
 end
 
 
+""" Function enumerates gene names in the data frame by incremention.
+"""
+function enumeratenames!(df::DataFrame)::DataFrame
+
+    ct = Int64(0)
+    l = size(df)[1]
+
+    for (i, x) in enumerate(eachrow(df))
+        ct += 1
+        if i+1 <= l
+            if x[4] == eachrow(df)[i+1][4]
+                x[4] = x[4]*".$ct"
+            else
+                x[4] = x[4]*".$ct"
+                ct = 0
+            end
+        else
+            x[4] = x[4]*".$ct"
+            ct = 0
+        end
+    end
+
+    return df
+end
+
+
+""" Remove duplicated entries differentiating by feature.
+    Featues are rated by their meaningfulness depth.
+    Keeps most accurate feature (gene has exons and introns, etc.).
+"""
 function rmdups(dframe::DataFrame)::DataFrame
 
-    df = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[], Counts=Int32[], Strand=String[], Feature=String[], Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
+    df = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
+                   Counts=Int32[], Strand=String[], Feature=String[],
+                   Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
     d = Dict("gene"=>13, "transcript"=>12,"exon"=>11, "intron"=>10, "CDS"=>9,
              "UTR"=>8, "three_prime_UTR"=>7, "five_prime_UTR"=>6,
