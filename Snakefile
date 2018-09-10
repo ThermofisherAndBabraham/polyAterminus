@@ -391,7 +391,7 @@ if (transcripts != None):
         shell:
             "julia --depwarn=no scripts/mark_poly_A.jl  -i -p {threads} " +
             "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
-            "-c -r {params.gz} &> {log}"
+            "-c -r {params.gz} 2>&1 | tee -a {log}"
 
 elif (gff != None and reference != None):
     rule trim_polyA_reads:
@@ -416,7 +416,7 @@ elif (gff != None and reference != None):
             shell:
                 "julia --depwarn=no scripts/mark_poly_A.jl  -i -p {threads} " +
                 "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
-                "-c -g {params.ref} -f {params.gff} &> {log}"
+                "-c -g {params.ref} -f {params.gff} 2>&1 | tee -a {log}"
 
 else:
     sys.exit("ERROR: (REFERENCE, GFF) or transcripts files does not exist!")
