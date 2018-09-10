@@ -71,18 +71,11 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
     close(reader)
 
     tic()
-    #Read ref genome FASTA File
-    # reader = open(FASTA.Reader, fa)
-    # record = FASTA.Record()
-    # outRecords = Array{BioSequences.FASTA.Record,1}()
-    # ct=1
+    #Read ref genome FASTA File and optains transcripts sequences
 
-    # for record in reader
-    #     append!(outRecords, get_transcripts_from_gff(record, transDict))
-    # end
     file_stream=open(fa,"r")
     result= @parallel (vcat) for record in collect(FASTA.Reader(file_stream))
-        get_transcripts_from_gff(record, transDict)
+        get_transcripts_from_dict(record, transDict)
     end
     println(result)
     toc()
@@ -91,7 +84,7 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
 end
 
 
-function get_transcripts_from_gff(record::BioSequences.FASTA.Record,
+function get_transcripts_from_dict(record::BioSequences.FASTA.Record,
     transDict::Dict)::Array{BioSequences.FASTA.Record,1}
     outRecords = Array{BioSequences.FASTA.Record,1}()
     chr = FASTA.identifier(record)
@@ -114,8 +107,6 @@ function get_transcripts_from_gff(record::BioSequences.FASTA.Record,
                 transSeq = reverse_complement!(transSeq)
             end
             push!(outRecords, FASTA.Record("Seq", transSeq))
-            #println(vcat(outRecords))
-            #println(STDERR,"$strand $chr ",length(transCoords)," ", length(transSeq))
         end
     else
         println(STDERR,"ERROR! Chromosome '",chr, "' is not in Gff file.")
