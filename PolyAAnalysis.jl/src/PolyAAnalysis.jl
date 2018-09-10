@@ -17,6 +17,7 @@ export
     trim_polyA_from_fastq_record,
     get_polyA_prefixes,
     get_transcripts_from_gff,
+    get_transcripts_from_dict,
     detect_polyA_in_a_string,
     extend_poly_A,
     trim_polyA_3end,
