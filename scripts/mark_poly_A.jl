@@ -22,7 +22,9 @@ using PolyAAnalysis
 """
 returns minimum kmer streches of not polyA ins a supplied transcript sequences from a file
 Arguments:
-    sequence - string with polyA streches (type - BioSequences reference seq)
+    file - string with path to transcripts fasta file
+    genomeFa - reference genome fasta file
+    gff - reference gff file with transcripts and exons
     minimum_not_polyA - minimum length of not polyA strech
     minimum_polyA_length - minimum length of polyA strech
     number_of_workers - number of julia processes
@@ -34,8 +36,12 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     number_of_workers::Int64=4,
     use_cached_results::Bool=true)
 
-    #file for caching
-    jldFile="exracted_polyA_prefixes.jdl"
+    # file for caching
+    if (file != nothing)
+        jldFile=file*"_exracted_polyA_prefixes.jdl"
+    elseif (gff != nothing && genomeFa != nothing)
+        jldFile=gff*"_exracted_polyA_prefixes.jdl"
+    end
 
     if !isfile(jldFile) | !use_cached_results
         # Open files and prepare decompression stream
@@ -52,17 +58,16 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
             println(STDERR,"ERROR! Missing transcripts or gff and reference files")
         end
         # Start julia worker processors
-
-    	#Crate counter for progress nonitoring
+    	# Crate counter for progress nonitoring
         counter = convert(SharedArray, zeros(Int64, nworkers()))
     	# Arry to collect results for output
         all_result=Array{String,1}()
-        #Parse transcripts
+        # Parse transcripts
         time= @elapsed result= @parallel  (vcat) for record in collectedFasta
             get_polyA_prefixes(record,minimum_not_polyA,
                               minimum_polyA_length,counter)
         end
-    	#get unique prefixes
+    	# get unique prefixes
         all_result=unique(result)
         number_of_unque_prefixes=length(all_result)
         println(STDERR, "Colected $number_of_unque_prefixes unique polyA prefixes in known transcripts in $time s")
