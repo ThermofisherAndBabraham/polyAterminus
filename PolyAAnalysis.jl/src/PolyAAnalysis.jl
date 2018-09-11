@@ -34,21 +34,21 @@ export
     WrFrame
 
 import BioAlignments: BAM
+import BioSequences
+import BioSequences: FASTQ
+import BufferedStreams
+import CodecZlib
+import CSV
 import DataFrames: DataFrame, DataFrameRow
 import DataFrames: eachrow, deleterows!
 import DataStructures
-import CSV
+import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, first, last
 import GenomicFeatures: GFF3
 import GenomicFeatures: Interval
-import GenomicFeatures: Strand
 import GenomicFeatures: IntervalCollection
-import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, first, last
-import BioSequences: FASTQ
-import BioSequences
+import GenomicFeatures: Strand
 import StringDistances: Levenshtein, evaluate
 import TranscodingStreams
-import CodecZlib
-import BufferedStreams
 
 include("MapPolyA.jl")
 include("TrimmPolyA.jl")

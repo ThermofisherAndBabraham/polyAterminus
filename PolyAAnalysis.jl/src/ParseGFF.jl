@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 
-using ArgParse.ArgParseSettings    #=                                    =#
 using ArgParse.@add_arg_table      #= For parsing command-line options   =#
+using ArgParse.ArgParseSettings    #=                                    =#
 using ArgParse.parse_args          #=                                    =#
 using BioSequences
 using FastaIO
