@@ -81,9 +81,9 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
     println(STDERR,"Number of transcripts in gff = ",num)
     close(reader)
 
+    println(STDERR,"Collecting sequences from ref genome using data from GFF")
     tic()
     # Read ref genome FASTA File and optains transcripts sequences
-
     file_stream=open(fa,"r")
     result= @parallel (vcat) for record in collect(FASTA.Reader(file_stream))
         get_transcripts_from_dict(record, transDict)
@@ -94,6 +94,12 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
 end
 
 
+"""
+returns array of biosequences from fasta record and dictonary with exons intervals
+Arguments:
+    record - fasta record
+    gff - dictonary with exons intervals
+"""
 function get_transcripts_from_dict(record::BioSequences.FASTA.Record,
     transDict::Dict)::Array{BioSequences.FASTA.Record,1}
     outRecords = Array{BioSequences.FASTA.Record,1}()
