@@ -27,6 +27,7 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
     strnd = ""
     chr = ""
     tic()
+
     for record in reader
         featureType=GenomicFeatures.GFF3.featuretype(record)
         # Check if new feature found, then push exons
@@ -65,6 +66,7 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
             end
         end
     end
+
     # Adds If exon was last record in gff3 file.
     if (coordex != "")
         coordex = coordex * strnd
@@ -104,6 +106,7 @@ function get_transcripts_from_dict(record::BioSequences.FASTA.Record,
     transDict::Dict)::Array{BioSequences.FASTA.Record,1}
     outRecords = Array{BioSequences.FASTA.Record,1}()
     chr = FASTA.identifier(record)
+    
     if (haskey(transDict,chr))
         # Reads transcripts in Chromosome from transcripts dict
         d = transDict[chr]
