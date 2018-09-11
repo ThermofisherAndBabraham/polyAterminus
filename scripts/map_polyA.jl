@@ -8,7 +8,9 @@ push!(LOAD_PATH, ".")
 using PolyAAnalysis
 
 function main(args)
-    arg_parse_settings = ArgParseSettings(description="Calculates uncovered windows number and GC bias.")
+    arg_parse_settings = ArgParseSettings(description="Finds mapping positions of polyA sites, annotations and writes tsv and bed files.
+                                                       Presumptions: 1) SE reads is used for alignment; 2) Reads were trimmed with 3EndD
+                                                       PolyAAnalysis trimmer which adds tags to the read names.")
     @add_arg_table arg_parse_settings begin
         "--bam", "-b"
             arg_type = String
