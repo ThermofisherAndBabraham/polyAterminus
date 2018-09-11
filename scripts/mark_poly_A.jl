@@ -16,9 +16,6 @@ push!(LOAD_PATH, ".")
 using PolyAAnalysis
 
 
-
-
-
 """
 returns minimum kmer streches of not polyA ins a supplied transcript sequences from a file
 Arguments:
@@ -89,8 +86,20 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     println(STDERR,"colected prefixes are sto")
 end
 
+"Creates named pipes that can read each x read from R1 and R2 files for each expected processes"
+function create_input_pipes(r1::String,r2::String, number_of_workers::Int64)
+    r1_filename=basename(r1)
+    r2_filename=basename(r2)
+    rand_suffix= randstring()
+    r1_filename_tmp_prefix="/tmp/"*r1_filename*rand_suffix
+    r2_filename_tmp_prefix="/tmp/"*r2_filename*rand_suffix
+    cmd1="mkfifo $r1_filename_tmp_prefix ; zcat  $r1 > $r1_filename_tmp_prefix & "
+    cmd2="mkfifo $r2_filename_tmp_prefix ; zcat  $r2 > $r2_filename_tmp_prefix & "
+    run(`bash -c $cmd1`)
+    run(`bash -c $cmd2`)
+    println("$r1_filename_tmp_prefix")
 
-
+end
 
 
 """
@@ -127,10 +136,6 @@ function trim_polyA_from_files(
     include_polyA::Bool;
     analysis_partition_size::Int64=100
     )
-
-    #input streams
-
-
 
     #output files
 
@@ -194,8 +199,6 @@ function trim_polyA_from_files(
                 else
                     debug=false
                 end
-
-
 
                 fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
                                                                 fastq1,
@@ -267,13 +270,26 @@ function trim_polyA_from_files(
 
 
     function put_fastq_for_processing(fastq1::String,fastq2::String,analysis_partition_size::Int64)
-        file_stream1=open(fastq1,"r")
+
         if fastq1[length(fastq1)-2:end] == ".gz"
-            file_stream1=GzipDecompressorStream(file_stream1)
+            file_stream1_decompress_stream=fastq1*"_ds"
+            cmd="mkfifo $file_stream1_decompress_stream ; zcat  $fastq1 > $file_stream1_decompress_stream & "
+            run(`bash -c $cmd`)
+            file_stream1=open(file_stream1_decompress_stream,"r")
+            #file_stream1=GzipDecompressorStream(file_stream1)
+        else
+            file_stream1=open(fastq1,"r")
         end
-        file_stream2=open(fastq2,"r")
+
         if fastq2[length(fastq2)-2:end] == ".gz"
-            file_stream2=GzipDecompressorStream(file_stream2)
+            file_stream2_decompress_stream=fastq2*"_ds"
+
+            cmd="mkfifo $file_stream2_decompress_stream ; zcat  $fastq2 > $file_stream2_decompress_stream & "
+            run(`bash -c $cmd`)
+            file_stream2=open(file_stream2_decompress_stream,"r")
+            #file_stream2=GzipDecompressorStream(file_stream2)
+        else
+            file_stream2=open(fastq2,"r")
         end
         for records_pair in partition(zip(FASTQ.Reader(file_stream1),FASTQ.Reader(file_stream2)),analysis_partition_size)
             ct_jobs+=1 # global jobs counter
@@ -476,8 +492,9 @@ function main(args)
     eval(macroexpand(quote @everywhere push!(LOAD_PATH, ".") end))
     eval(macroexpand(quote @everywhere using PolyAAnalysis end))
 
+    #create_input_pipes(parsed_args["fastq-f"],parsed_args["fastq-r"],parsed_args["processes"])
+    #exit()
 
-    println(parsed_args["reference-transcripts"], parsed_args["reference-genome"], parsed_args["reference-gff"])
     polyA_prefixes=get_polyA_prefixes_from_file(parsed_args["reference-transcripts"],
     parsed_args["reference-genome"],
     parsed_args["reference-gff"],
@@ -486,6 +503,7 @@ function main(args)
     number_of_workers=parsed_args["processes"],
     use_cached_results=parsed_args["use-precalculated-reference-transcripts-prefixes"])
     tic()
+
     trim_polyA_from_files(
         parsed_args["fastq-f"],
         parsed_args["fastq-r"],
