@@ -8,9 +8,9 @@ push!(LOAD_PATH, ".")
 using PolyAAnalysis
 
 function main(args)
-    arg_parse_settings = ArgParseSettings(description="Finds mapping positions of polyA sites, annotations and writes tsv and bed files.
-                                                       Presumptions: 1) SE reads is used for alignment; 2) Reads were trimmed with 3EndD
-                                                       PolyAAnalysis trimmer which adds tags to the read names.")
+    arg_parse_settings = ArgParseSettings(description = "Finds mapping positions of polyA sites, annotations and writes tsv and bed files.
+                                                        Presumptions: 1) SE reads is used for alignment; 2) Reads were trimmed with 3EndD
+                                                        PolyAAnalysis trimmer which adds tags to the read names.")
     @add_arg_table arg_parse_settings begin
         "--bam", "-b"
             arg_type = String
@@ -32,17 +32,17 @@ function main(args)
 
     parsed_args = parse_args(arg_parse_settings)
     tic()
-    gffcollection = ParseGFF3(parsed_args["gff3file"])
+    gffcollection = parseGFF3(parsed_args["gff3file"])
     println("Parsed gff: ")
     toc()
 
     bam = parsed_args["bam"]
     tic()
-    treads, passreads, pareads, pclus = BamRead(bam)
+    treads, passreads, pareads, pclus = readbam(bam)
     println("Parsed bam $bam: ")
     toc()
     tic()
-    statdframe = PolACalculus(pclus)
+    statdframe = stats_poly_a(pclus)
     println("Gen dataframe: ")
     toc()
     statdframe[:Smaple] = basename(bam)
@@ -50,16 +50,16 @@ function main(args)
     statdframe[:PassedReads] = passreads
     statdframe[:PolyAReads] = pareads
     statdframe = sort!(statdframe, [:Chrmosome, :Position])
-    WrFrame(parsed_args["outfile"]*"_detected_polyA.tsv", statdframe, '\t')
+    wrframe(parsed_args["outfile"]*"_detected_polyA.tsv", statdframe, '\t')
     tic()
-    intervalcolection = GetIntervalSet(statdframe)
+    intervalcolection = getintervals(statdframe)
     println("Got intervals in: ")
     toc()
     tic()
-    joinedcollection = ItsectCollection(intervalcolection, gffcollection)
+    joinedcollection = add_features(intervalcolection, gffcollection)
     println("Intersected in: ")
     toc()
-    WrFrame(parsed_args["outfile"]*"_mapped_polyA.bed", joinedcollection, '\t')
+    wrframe(parsed_args["outfile"]*"_mapped_polyA.bed", joinedcollection, '\t')
 
 end
 

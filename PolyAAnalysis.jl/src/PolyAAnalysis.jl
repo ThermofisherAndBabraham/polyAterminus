@@ -13,23 +13,24 @@ __precompile__()
 module PolyAAnalysis
 
 export
-    trim_polyA_file_records,
-    trim_polyA_from_fastq_record,
-    get_polyA_prefixes,
-    detect_polyA_in_a_string,
-    extend_poly_A,
-    trim_polyA_3end,
+    stats_poly_a,
     check_polyA_prefixes,
-    trim_polyA_from_fastq_pair,
-    BamRead,
-    Clust!,
-    PolACalculus,
-    ParseGFF3,
-    ParseRecord,
-    GetIntervalSet,
-    ItsectCollection,
+    clust!,
+    detect_polyA_in_a_string,
+    enumeratenames!,
+    extend_poly_A,
+    get_polyA_prefixes,
+    getintervals,
+    add_features,
+    parseGFF3,
+    parserecord,
+    readbam,
     rmdups,
-    WrFrame
+    trim_polyA_3end,
+    trim_polyA_file_records,
+    trim_polyA_from_fastq_pair,
+    trim_polyA_from_fastq_record,
+    wrframe
 
 import BioAlignments: BAM
 import DataFrames: DataFrame, DataFrameRow
