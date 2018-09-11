@@ -43,3 +43,8 @@ if ! $JULIA -e 'using StringDistances' > /dev/null 2>&1; then
     $JULIA -e 'Pkg.add("StringDistances", v"0.2.1")'
     $JULIA -e 'using StringDistances'
 fi
+
+if ! $JULIA -e 'using FastaIO' > /dev/null 2>&1; then
+    $JULIA -e 'Pkg.add("FastaIO", v"0.4.1")'
+    $JULIA -e 'using FastaIO'
+fi
