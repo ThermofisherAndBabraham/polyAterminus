@@ -6,10 +6,13 @@ using GenomicFeatures
 
 
 """
-returns array of transcripts from reference genome and gff3 file
-Arguments:
-    fa - reference genome file in fasta format
-    gff - reference genome gff3 file
+    get_transcripts_from_gff(fa::String, gff::String)
+
+    Conmputes and returns array of transcripts from reference genome and gff3 file.
+
+    # Arguments
+    - `fa::String`: path to fasta file of reference genome.
+    - `gff::String`: path to gff3 transcripts file.
 """
 function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.FASTA.Record,1}
 
@@ -94,10 +97,13 @@ end
 
 
 """
-returns array of biosequences from fasta record and dictonary with exons intervals
-Arguments:
-    record - fasta record
-    gff - dictonary with exons intervals
+    get_transcripts_from_dict(record::BioSequences.FASTA.Record, transdict::Dict)
+
+    Computes and returns array of biosequences from fasta record and dictonary with exons intervals.
+
+    # Arguments
+    - `record::BioSequences.FASTA.Record`: Fasta record of sequence.
+    - `transdict::Dict`: dictonary with intervals describing exons.
 """
 function get_transcripts_from_dict(record::BioSequences.FASTA.Record,
     transdict::Dict)::Array{BioSequences.FASTA.Record,1}
