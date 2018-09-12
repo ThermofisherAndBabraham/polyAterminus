@@ -62,7 +62,6 @@ logs = out+"/"+"LOGS"
 # ------------------------------ MACHINE ------------------------------------- #
 
 threads = config["MACHINE"]["threads"]
-memory = config["MACHINE"]["memory"]
 star_threads = config["MAPPING"]["STAR"]["threads"]
 julia_threads = config["MACHINE"]["threads_julia"]
 memory_java = config["MACHINE"]["memory_java"]

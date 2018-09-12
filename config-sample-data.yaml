@@ -18,7 +18,6 @@ SCRATCH: tmp
 #########################
 MACHINE:
     threads: 24
-    memory: 8
     threads_julia: 8
     memory_java: 8
 
