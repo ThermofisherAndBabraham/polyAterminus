@@ -59,7 +59,7 @@ You can install  the dependencies manually or through conda environment as indic
 ```
 
 
-## Notes for `config.yaml`
+## Notes for analysis configuration `config.yaml`
 
 * `threads`: consider is as how many parallel programs should be running on your PC.
 * `memory_java`: for human 60 GB is recommended.
@@ -70,13 +70,13 @@ You can install  the dependencies manually or through conda environment as indic
 * `polyA_ref`: polyA reference for `bbduk` trimmer.
 * `GFF3` and `GTF`: should be the same version.
 
-If you want to normalize all samples by lowest read number found:
-* `SUBSAMPLING:
-        run: true`
-If you want to subsample to specific read number:
-* `SUBSAMPLING:
-        run: true
-        subsample_to: N`
+* If you want to normalize all samples by lowest read number found:
+`SUBSAMPLING:`
+    `run: true`
+* If you want to subsample to specific read number:
+`SUBSAMPLING:`
+    `run: true`
+    `subsample_to: N`
 
 ## TODO
 
