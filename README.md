@@ -34,7 +34,7 @@ You can install  the dependencies manually or through conda environment as indic
     conda config --add channels conda-forge
     conda config --add channels bioconda
     conda config --add channels anaconda
-    conda config --add channels r
+    conda config --add channels defaults
 ```
 2. Create your `conda` environment:
  ```bash
@@ -69,9 +69,10 @@ You can install  the dependencies manually or through conda environment as indic
 
 ## TODO
 
-- [ ]  `output`: should be correct output for all necessary files.
-- [ ]  `environment`: all applications should be added.
-- [ ]  Tests for `MapPolyA.jl`
-- [ ]  Check strands after parsing Bam in `MapPolyA.jl`
-- [ ]  Test `rmdups()` in `MapPolyA.jl`
-- [ ]  Align all rule names.
+- [x]  `output`: should be correct output for all necessary files.
+- [x]  `environment`: all applications should be added.
+- [x]  Tests for `MapPolyA.jl`
+- [x]  Check strands after parsing Bam in `MapPolyA.jl`
+- [x]  Test `rmdups()` in `MapPolyA.jl`
+- [ ]  Align all rule names and code.
+- [ ]  Add documentation.
