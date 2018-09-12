@@ -82,7 +82,7 @@ rule all:
         expand(out + "/STAR/{stem}_polyA.bam", out=out, stem=stems),
         expand(out + "/STAR/{stem}Log.final.out", out=out, stem=stems),
         expand(out + "/ANNOTATE-POLYA/{stem}_detected_polyA.tsv", out=out, stem=stems),
-        expand(out + "/ANNOTATE-POLYA/{stem}_mapped_polyA.bed", out=out, stem=stems),
+        expand(out + "/ANNOTATE-POLYA/{stem}_annotated_polyA.bed", out=out, stem=stems),
         out + "/fastqc_report_raw_reads.html",
         out + "/fastqc_report_processed_reads.html"
 
@@ -426,11 +426,11 @@ rule annotate_polyA:
         out + "/STAR/{stem}_polyA.bam"
     output:
         out + "/ANNOTATE-POLYA/{stem}_detected_polyA.tsv",
-        out + "/ANNOTATE-POLYA/{stem}_mapped_polyA.bed"
+        out + "/ANNOTATE-POLYA/{stem}_annotated_polyA.bed"
     benchmark:
         "benchmarks/{stem}_mapping_polyA.log"
     log:
-        logs + "/{stem}_mapped_polyA.log"
+        logs + "/ANNOTATE-POLYA/{stem}_mapped_polyA.log"
     threads:
         julia_threads
     params:
