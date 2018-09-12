@@ -64,10 +64,3 @@ if ! $JULIA -e 'using StringDistances' > /dev/null 2>&1; then
     $JULIA -e 'using StringDistances'
 else echo 'Julia pkg StringDistances is installed ... Nothing to be done.'
 fi
-
-if ! $JULIA -e 'using FastaIO' > /dev/null 2>&1; then
-    echo 'Julia pkg FastaIO is beeing installed ...'
-    $JULIA -e 'Pkg.add("FastaIO", v"0.4.1")'
-    $JULIA -e 'using FastaIO'
-else echo 'Julia pkg FastaIO is installed ... Nothing to be done.'
-fi
