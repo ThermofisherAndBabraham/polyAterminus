@@ -404,7 +404,7 @@ function enumeratenames!(df::DataFrame)::DataFrame
 
         if x[4] == "NA" && i+1 <= l
             na_ct += 1
-            x[4] = x[4]*".$ct"
+            x[4] = x[4]*".$na_ct"
         elseif i+1 <= l
             if x[4] == eachrow(df)[i+1][4]
                 x[4] = x[4]*".$ct"
