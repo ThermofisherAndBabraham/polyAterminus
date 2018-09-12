@@ -1,6 +1,3 @@
-using BioSequences
-using GenomicFeatures
-
 ##
 ## function get_transcripts_from_gff(record::BioSequences.FASTA.Record,
 ##    transDict::Dict)::Array{BioSequences.FASTA.Record,1}
