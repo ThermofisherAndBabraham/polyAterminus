@@ -36,6 +36,7 @@ export
 
 import BioAlignments: BAM
 import BioSequences
+import BioSequences: BioSymbols, @dna_str, FASTA, reverse_complement!
 import BioSequences: FASTQ
 import BufferedStreams
 import CodecZlib
