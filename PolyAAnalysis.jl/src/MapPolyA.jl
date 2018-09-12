@@ -81,28 +81,80 @@ end
 
 
 function wrframe(fname::String, data::DataFrame, delim::Char)
-    if !isfile(fname)
-        CSV.write(fname, data, delim=delim)
-    else
-        CSV.write(fname, data, delim=delim, append=true, header=false)
-    end
+    CSV.write(fname, data, delim=delim)
 end
 
 
-function parseGFF3(gff3file::String)::IntervalCollection{String}
-    intcol = IntervalCollection{String}()
+function parseGFF3(gff3file::String)::Dict{String, IntervalCollection{String}}
+    intcol = Dict{String, IntervalCollection{String}}()
 
     for record in open(GFF3.Reader, gff3file)
         chr::String = GFF3.seqid(record)
         start::Int = GFF3.seqstart(record)
         seqend::Int = GFF3.seqend(record)
         strand::Strand = GFF3.strand(record)
-
+        split_k = get_split_key(chr, start, seqend)
         mdstr = parserecord(record)
-        push!(intcol, Interval(chr, start, seqend, strand, mdstr))
+
+        for i in split_k
+            if haskey(intcol, i)
+                push!(intcol[i], Interval(chr, start, seqend, strand, mdstr))
+            else
+                intcol[i] = IntervalCollection{String}()
+                push!(intcol[i], Interval(chr, start, seqend, strand, mdstr))
+            end
+        end
     end
 
     return intcol
+end
+
+"""
+    get_split_key(chr::String, x::Int64, y::Int64; step::Int64=10000)
+
+    Calculates ranges depending on the step and gff3 coordinates.
+"""
+function get_split_key(chr::String, x::Int64, y::Int64; step::Int64=10000)::Array{String,1}
+
+    a = Array{String,1}()
+
+    function get_interval(x::Int64,y::Int64)
+        if x >= y
+            if x%y == 0
+                ix1 = x - y + 1
+                ix2 = x
+            else
+                ix1 = x - x%y + 1
+                ix2 = x - x%y + y
+            end
+        else
+            ix1 = 1
+            ix2 = y
+        end
+
+        return ix1:ix2
+    end
+
+    interv = get_interval(x, step)
+
+    if y in interv
+        push!(a, chr*":"*string(interv))
+    else
+        push!(a, chr*":"*string(interv))
+        interv2 = get_interval(y, step)
+
+        if interv[end] == interv2[1]
+            push!(a, chr*":"*string(interv2))
+        else
+            for i in interv[end]:step:interv2[1]-1
+                ix1=i+1
+                ix2=i+step
+                push!(a, chr*":"*string(ix1:ix2))
+            end
+        end
+    end
+
+    return a
 end
 
 
@@ -224,16 +276,16 @@ end
 
 
 """
-    add_features(a::IntervalCollection, b::IntervalCollection)
+    annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCollection{String}})
 
     Function searches for overlaping intervals. If overlapped - adds annotation
     to the dataframe. If not - add NA.
 
     # Arguments
     - `a::IntervalCollection`: a collection of intervals of PolyA sites.
-    - `b::IntervalCollection`: a collection of intervals from gff3.
+    - `b::Dict{String, IntervalCollection{String}}`: a dictionary with a sorted collections of intervals from gff3.
 """
-function add_features(a::IntervalCollection, b::IntervalCollection)::DataFrame
+function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCollection{String}})::DataFrame
 
     # Two dataframes for '+' and '-' strands.
     dfp = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
@@ -252,25 +304,36 @@ function add_features(a::IntervalCollection, b::IntervalCollection)::DataFrame
         me = parse(Float32,split(splt1[1],"=")[2])
         mi = parse(Int16,split(splt1[2],"=")[2])
         mx = parse(Int16,split(splt1[3],"=")[2])
+        chr = seqname(i1)
+        it1 = first(i1)
+        it2 = last(i1)
 
-        for i2 in b
-            if chechoverlap(i1, i2)
-                # parse metadate from GFF3 anotation
-                splt::Array{SubString{String},1} = split(metadata(i2),";")
-                ft = split(splt[7],"=")[2]
-                gn = split(splt[6],"=")[2]
-                bt = split(splt[5],"=")[2]
-                ct += 1
-                if strand(i1) == Strand('-')
-                    push!(dfn, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
-                else
-                    push!(dfp, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
+        # assuming that start and end is the same of the polyA site.
+        split_k = get_split_key(chr, it1, it2)[1]
+
+        try
+            for i2 in b[split_k]
+                if chechoverlap(i1, i2)
+                    # parse metadata from GFF3 anotation
+                    splt::Array{SubString{String},1} = split(metadata(i2),";")
+                    ft = split(splt[7],"=")[2]
+                    gn = split(splt[6],"=")[2]
+                    bt = split(splt[5],"=")[2]
+                    ct += 1
+                    if strand(i1) == Strand('-')
+                        push!(dfn, [seqname(i1) it1 it2 gn c str ft me mi mx bt])
+                    else
+                        push!(dfp, [seqname(i1) it1 it2 gn c str ft me mi mx bt])
+                    end
                 end
             end
+        catch
+            println(split_k," not found in reference gff3 file.")
+            println(i1)
         end
 
+        # if no overlaping of polyA coordinates with GFF3 annotated coordinates - NA is added.
         if ct == 0
-            # if polyA site was not found in GFF3 annotations NA is added.
             ft = "NA"
             gn = "NA"
             bt = "NA"
@@ -283,8 +346,8 @@ function add_features(a::IntervalCollection, b::IntervalCollection)::DataFrame
         end
     end
 
-    sort!(dfn, [:Start, :End, :Name], rev=true)
-    sort!(dfp, [:Start, :End, :Name])
+    sort!(dfn, [:Chr, :Start, :End, :Name], rev=true)
+    sort!(dfp, [:Chr, :Start, :End, :Name])
 
     dfp = rmdups(dfp)
     dfn = rmdups(dfn)
@@ -334,10 +397,15 @@ function enumeratenames!(df::DataFrame)::DataFrame
 
     ct = Int64(0)
     l = size(df)[1]
+    na_ct = Int64(0)
 
     for (i, x) in enumerate(eachrow(df))
         ct += 1
-        if i+1 <= l
+
+        if x[4] == "NA" && i+1 <= l
+            na_ct += 1
+            x[4] = x[4]*".$ct"
+        elseif i+1 <= l
             if x[4] == eachrow(df)[i+1][4]
                 x[4] = x[4]*".$ct"
             else
@@ -358,6 +426,7 @@ end
     rmdups(dframe::DataFrame)
 
     Removes duplicated entries differentiating by feature.
+    DataFrame should be sorted by Chr, Start, End and gene name.
     Featues are rated by their annotation hierarchy.
     Keeps most accurate feature (gene has exons and introns, etc.).
 """
