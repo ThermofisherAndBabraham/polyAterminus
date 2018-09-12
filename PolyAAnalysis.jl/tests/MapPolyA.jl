@@ -88,7 +88,8 @@ tdf = DataFrame(Chrmosome=String["chr1","chr2","chr3"],
                           Interval("chr2",160,160,Strand('-'),"Median=400.0;Min=300;Max=400;Counts=3")
                           Interval("chr3",170,170,Strand('.'),"Median=600.0;Min=600;Max=600;Counts=1")
                           ]) == getintervals(tdf)
-# function add_features(a::IntervalCollection, b::IntervalCollection)::DataFrame
+
+# function annotate_polya_sites(a::IntervalCollection,  b::Dict{String, IntervalCollection{String}})::DataFrame
 
 intcol1 = IntervalCollection([Interval("chr1",150,150,Strand('+'),"Median=200.0;Min=100;Max=300;Counts=3")
                           Interval("chr2",160,160,Strand('-'),"Median=400.0;Min=300;Max=400;Counts=3")
@@ -96,31 +97,82 @@ intcol1 = IntervalCollection([Interval("chr1",150,150,Strand('+'),"Median=200.0;
                           Interval("chr3",3000,3000,Strand('.'),"Median=600.0;Min=600;Max=600;Counts=1")
                           ])
 
-intcol2 = IntervalCollection([Interval("chr1",150,150,Strand('+'),
-                                       String("ID=exon:ENST00000643283.1:12;"*
-                                              "Parent=ENST00000643283.1;"*
-                                              "gene_id=ENSG00000126091.20;"*
-                                              "transcript_id=ENST00000643283.1;"*
-                                              "gene_type=protein_coding;"*
-                                              "gene_name=ST3GAL3;"*
-                                              "ftype=exon"))
-                              Interval("chr2",160,160,Strand('-'),
-                                       String("ID=exon:ENST00000643282.1:12;"*
-                                              "Parent=ENST00000643282.1;"*
-                                              "gene_id=ENSG00000126092.20;"*
-                                              "transcript_id=ENST00000643282.1;"*
-                                              "gene_type=protein_coding;"*
-                                              "gene_name=ST3GAL32;"*
-                                              "ftype=intron"))
-                              Interval("chr3",170,170,Strand('.'),
-                                       String("ID=exon:ENST00000643283.4:12;"*
-                                              "Parent=ENST00000643283.4;"*
-                                              "gene_id=ENSG00000126094.20;"*
-                                              "transcript_id=ENST00000643284.1;"*
-                                              "gene_type=protein_coding;"*
-                                              "gene_name=ST3GAL43;"*
-                                              "ftype=exon"))
-                              ])
+intcol2 = Dict("chr1:1:10000" => IntervalCollection([Interval("chr1",150,150,Strand('+'),
+                                                          String("ID=exon:ENST00000643283.1:12;"*
+                                                                 "Parent=ENST00000643283.1;"*
+                                                                 "gene_id=ENSG00000126091.20;"*
+                                                                 "transcript_id=ENST00000643283.1;"*
+                                                                 "gene_type=protein_coding;"*
+                                                                 "gene_name=ST3GAL3;"*
+                                                                 "ftype=exon"))
+                                                         Interval("chr1",160,160,Strand('-'),
+                                                          String("ID=exon:ENST00000643282.1:12;"*
+                                                                 "Parent=ENST00000643282.1;"*
+                                                                 "gene_id=ENSG00000126092.20;"*
+                                                                 "transcript_id=ENST00000643282.1;"*
+                                                                 "gene_type=protein_coding;"*
+                                                                 "gene_name=ST3GAL32;"*
+                                                                 "ftype=intron"))
+                                                         Interval("chr1",170,170,Strand('.'),
+                                                          String("ID=exon:ENST00000643283.4:12;"*
+                                                                 "Parent=ENST00000643283.4;"*
+                                                                 "gene_id=ENSG00000126094.20;"*
+                                                                 "transcript_id=ENST00000643284.1;"*
+                                                                 "gene_type=protein_coding;"*
+                                                                 "gene_name=ST3GAL43;"*
+                                                                 "ftype=exon"))
+                                                         ]),
+               "chr2:1:10000" => IntervalCollection([Interval("chr2",150,150,Strand('+'),
+                                                          String("ID=exon:ENST00000643283.1:12;"*
+                                                                 "Parent=ENST00000643283.1;"*
+                                                                 "gene_id=ENSG00000126091.20;"*
+                                                                 "transcript_id=ENST00000643283.1;"*
+                                                                 "gene_type=protein_coding;"*
+                                                                 "gene_name=ST3GAL3;"*
+                                                                 "ftype=exon"))
+                                                         Interval("chr2",160,160,Strand('-'),
+                                                          String("ID=exon:ENST00000643282.1:12;"*
+                                                                 "Parent=ENST00000643282.1;"*
+                                                                 "gene_id=ENSG00000126092.20;"*
+                                                                 "transcript_id=ENST00000643282.1;"*
+                                                                 "gene_type=protein_coding;"*
+                                                                 "gene_name=ST3GAL32;"*
+                                                                 "ftype=intron"))
+                                                         Interval("chr2",170,170,Strand('.'),
+                                                          String("ID=exon:ENST00000643283.4:12;"*
+                                                                 "Parent=ENST00000643283.4;"*
+                                                                 "gene_id=ENSG00000126094.20;"*
+                                                                 "transcript_id=ENST00000643284.1;"*
+                                                                 "gene_type=protein_coding;"*
+                                                                 "gene_name=ST3GAL43;"*
+                                                                 "ftype=exon"))
+                                                         ]),
+               "chr3:1:10000" => IntervalCollection([Interval("chr3",150,150,Strand('+'),
+                                                      String("ID=exon:ENST00000643283.1:12;"*
+                                                             "Parent=ENST00000643283.1;"*
+                                                             "gene_id=ENSG00000126091.20;"*
+                                                             "transcript_id=ENST00000643283.1;"*
+                                                             "gene_type=protein_coding;"*
+                                                             "gene_name=ST3GAL3;"*
+                                                             "ftype=exon"))
+                                                     Interval("chr3",160,160,Strand('-'),
+                                                      String("ID=exon:ENST00000643282.1:12;"*
+                                                             "Parent=ENST00000643282.1;"*
+                                                             "gene_id=ENSG00000126092.20;"*
+                                                             "transcript_id=ENST00000643282.1;"*
+                                                             "gene_type=protein_coding;"*
+                                                             "gene_name=ST3GAL32;"*
+                                                             "ftype=intron"))
+                                                     Interval("chr3",170,170,Strand('.'),
+                                                      String("ID=exon:ENST00000643283.4:12;"*
+                                                             "Parent=ENST00000643283.4;"*
+                                                             "gene_id=ENSG00000126094.20;"*
+                                                             "transcript_id=ENST00000643284.1;"*
+                                                             "gene_type=protein_coding;"*
+                                                             "gene_name=ST3GAL43;"*
+                                                             "ftype=exon"))
+                                                     ])
+               )
 
 @test DataFrame(Chr=String["chr1","chr2","chr3","chr3"],
                 Start=Int64[150,160,170,3000],
@@ -133,7 +185,7 @@ intcol2 = IntervalCollection([Interval("chr1",150,150,Strand('+'),
                 Min=Int16[100,300,600,600],
                 Max=Int16[300,400,600,600],
                 Biotype=String["protein_coding","protein_coding","protein_coding","NA"]
-                ) == sort!(add_features(intcol1, intcol2), [:Chr, :Start])
+                ) == sort!(annotate_polya_sites(intcol1, intcol2), [:Chr, :Start])
 
 # function rmdups(dframe::DataFrame)::DataFrame
 
@@ -208,3 +260,21 @@ tdf3 = DataFrame(Chr=String["chr1","chr1","chr2","chr2","chr2","chr2"],
                  )
 
 @test tdf3 == enumeratenames!(tdf)
+
+# function get_split_key(chr::String, x::Int; step::Int64=10000)::String
+
+@test ["chr1:1:10"] == get_split_key("chr1",2,4; step=10)
+@test ["chr2:1291:1300",
+       "chr2:1301:1310",
+       "chr2:1311:1320"] == get_split_key("chr2",1300,1315; step=10)
+@test ["chr2:1291:1300",
+      "chr2:1301:1310",
+      "chr2:1311:1320",
+      "chr2:1321:1330"] == get_split_key("chr2",1300,1325; step=10)
+@test ["chr4:1:10000"] == get_split_key("chr4",1300,1300; step=10000)
+@test ["chr4:1:10000"] == get_split_key("chr4",10000,10000; step=10000)
+@test ["chr4:10001:20000"] == get_split_key("chr4",10290,10290; step=10000)
+@test ["chr4:10001:20000"] == get_split_key("chr4",10590,10590; step=10000)
+@test ["chr4:500001:510000"] == get_split_key("chr4",500590,500590; step=10000)
+@test ["chr21:45070001:45080000"] == get_split_key("chr21",45073853,45073853)
+@test ["chr21:46680001:46690000"] == get_split_key("chr21", 46689753,46689753)
