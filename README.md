@@ -61,11 +61,22 @@ You can install  the dependencies manually or through conda environment as indic
 
 ## Notes for `config.yaml`
 
-* `Threads`: Consider is as how many parallel programs should be run on your PC.
-* `memory`: restricts parallelism. Consider as threads.
-* `memory_java`: for human 120 GB is recommended.
+* `threads`: consider is as how many parallel programs should be running on your PC.
+* `memory_java`: for human 60 GB is recommended.
 * `threads_julia`: usually no more than 8.
-* `threads_star`:
+* `threads_star`: max as you wish.
+* `SCRATCH`: location of tmp directory for faster computation (SSD).
+* `REFERENCE`: genome in fasta format.
+* `polyA_ref`: polyA reference for `bbduk` trimmer.
+* `GFF3` and `GTF`: should be the same version.
+
+If you want to normalize all samples by lowest read number found:
+* `SUBSAMPLING:
+        run: true`
+If you want to subsample to specific read number:
+* `SUBSAMPLING:
+        run: true
+        subsample_to: N`
 
 ## TODO
 
