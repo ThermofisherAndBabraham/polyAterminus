@@ -59,7 +59,7 @@ function main(args)
     joinedcollection = annotate_polya_sites(intervalcolection, gffcollection)
     println("Intersected in: ")
     toc()
-    wrframe(parsed_args["outfile"]*"_mapped_polyA.bed", joinedcollection, '\t')
+    wrframe(parsed_args["outfile"]*"_annotated_polyA.bed", joinedcollection, '\t')
 
 end
 
