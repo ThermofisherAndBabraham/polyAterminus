@@ -337,7 +337,8 @@ rule star_index:
 
 rule alignment_polyA_reads:
     input:
-        fastq = tmp + "/{stem}_PolyA.fastq.gz",
+        tmp + "/{stem}_R1_trimmedPolyA.fastq.gz",
+        tmp + "/{stem}_R2_trimmedPolyA.fastq.gz",
         genomeDir = directory(reference + "_STAR_annotation")
     output:
         out + "/STAR/{stem}_polyA.bam",
@@ -359,7 +360,7 @@ rule alignment_polyA_reads:
             "--genomeDir {input.genomeDir} --runMode alignReads " +
             "--outSAMunmapped Within " +
             "--outFileNamePrefix {params.prefix} " +
-            "--readFilesIn {input.fastq} --readFilesCommand zcat " +
+            "--readFilesIn {input[0]} {input[1]} --readFilesCommand zcat " +
             "--genomeLoad NoSharedMemory " +
             "--outSAMstrandField intronMotif --outSAMattributes All " +
             "--outSAMtype BAM Unsorted " +
