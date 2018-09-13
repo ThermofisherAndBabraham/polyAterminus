@@ -19,8 +19,8 @@ export
     detect_polyA_in_a_string,
     enumeratenames!,
     extend_poly_A,
-    get_split_key,
     get_polyA_prefixes,
+    get_split_key,
     get_transcripts_from_dict,
     get_transcripts_from_gff,
     getintervals,
@@ -54,7 +54,7 @@ import StringDistances: Levenshtein, evaluate
 import TranscodingStreams
 
 include("MapPolyA.jl")
-include("TrimmPolyA.jl")
 include("ParseGFF.jl")
+include("TrimmPolyA.jl")
 
 end  # module PolyAAnalysis
