@@ -294,10 +294,14 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
     dfn = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
                     Counts=Int32[], Strand=String[], Feature=String[],
                     Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
+    # Dataframe for not annotated sites.
+    dfna = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
+                    Counts=Int32[], Strand=String[], Feature=String[],
+                    Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
     for i1 in a
         ct = Int64(0)
-        # parse metadata from polyA site
+        # Parse metadata from polyA site.
         splt1::Array{SubString{String},1} = split(metadata(i1),";")
         c = parse(Int32,split(splt1[4],"=")[2])
         str = string(strand(i1))
@@ -308,7 +312,7 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
         it1 = first(i1)
         it2 = last(i1)
 
-        # assuming that start and end is the same of the polyA site.
+        # Assuming that start and end is the same of the polyA site.
         split_k = get_split_key(chr, it1, it2)[1]
 
         try
@@ -337,24 +341,22 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
             gn = "NA"
             bt = "NA"
 
-            if strand(i1) == Strand('-')
-                push!(dfn, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
-            else
-                push!(dfp, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
-            end
+            push!(dfna, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
         end
     end
 
     sort!(dfn, [:Chr, :Start, :End, :Name], rev=true)
     sort!(dfp, [:Chr, :Start, :End, :Name])
+    sort!(dfna, [:Chr, :Start, :End, :Name])
 
     dfp = rmdups(dfp)
     dfn = rmdups(dfn)
 
     enumeratenames!(dfn)
     enumeratenames!(dfp)
+    enumeratenames!(dfna)
 
-    df = vcat(dfp, dfn)
+    df = vcat(dfp, dfn, dfna)
 
     return df
 end
