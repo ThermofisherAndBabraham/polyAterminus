@@ -8,10 +8,3 @@ makedocs(
     authors = "GA, KM, GM, and contributors.",
     pages = ["Methods" => "index.md"]
 )
-
-deploydocs(
-    repo   = "github.com/USER/PKG.jl.git",
-    target = "build",
-    deps   = nothing,
-    make   = nothing
-)
