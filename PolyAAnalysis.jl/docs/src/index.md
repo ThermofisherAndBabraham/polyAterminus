@@ -7,7 +7,7 @@ DocTestSetup = quote
 end
 ```
 ---
-### Functions:
+### Quick access:
 ```@index
 ```
 ---
