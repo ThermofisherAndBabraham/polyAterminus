@@ -328,8 +328,7 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
                 end
             end
         catch
-            println(split_k," not found in reference gff3 file.")
-            println(i1)
+            KeyError(split_k)
         end
 
         # if no overlaping of polyA coordinates with GFF3 annotated coordinates - NA is added.
