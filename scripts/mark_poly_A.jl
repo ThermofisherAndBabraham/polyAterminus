@@ -31,7 +31,7 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     minimum_not_polyA::Int64=20,
     minimum_polyA_length::Int64=20,
     number_of_workers::Int64=4,
-    use_cached_results::Bool=false)
+    use_cached_results::Bool=true)
 
     # file for caching
     if file != nothing
