@@ -102,6 +102,7 @@ end
 """
 function get_transcripts_from_dict(record::BioSequences.FASTA.Record,
     transdict::Dict)::Array{BioSequences.FASTA.Record,1}
+
     outrecords = Array{BioSequences.FASTA.Record,1}()
     chr = FASTA.identifier(record)
 
