@@ -128,7 +128,6 @@ Arguments:
     minimum_not_polyA - minimum length of not polyA strech in a read
     minimum_polyA_length - minimum length of polyA strech
     maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
-    minimum_distance_from_non_poly - minimum distance of non A symbols in polyA strech from the nonA sequence
     maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
     minimum_poly_A_between - minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
     include_polyA - Includes output polyA sequences as pseudo pair end's  into output fastq
@@ -145,7 +144,6 @@ function trim_polyA_from_files(
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
-    minimum_distance_from_non_poly_A::Int64,
     maximum_distance_with_prefix_database::Int64,
     minimum_poly_A_between::Int64,
     include_polyA::Bool;
@@ -474,7 +472,6 @@ function main(args)
         parsed_args["minimum-length"],
         parsed_args["minimum-polyA-length"],
         1, # maximum_non_A_symbols::Int64,
-        1, # minimum_distance_from_non_poly::Int64
         3,  # maximum_distance_with_prefix_database
         4, # minimum_poly_A_between
         parsed_args["incude-polyA-in-output"]

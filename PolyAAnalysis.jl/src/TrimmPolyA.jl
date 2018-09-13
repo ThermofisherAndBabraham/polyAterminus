@@ -3,7 +3,16 @@
 
 
 """
-checks if a string of a read contains polyA strechA strating from the 3' end
+
+function detect_polyA_in_a_string(
+    fq_seq::String,
+    minimum_polyA_length::Int64,
+    maximum_non_A_symbols::Int64;
+    debug=false
+    )::Bool
+
+Checks if a string of a read contains polyA strechA starting seach from the 3'
+Once a g search once a strech is found. A first and last symbol of a strech must be A.
     fq_seq - string for testing
     minimum_polyA_length - minimum length of polyA strech
     maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
@@ -21,7 +30,7 @@ function detect_polyA_in_a_string(
         window_position_from_3_end+=1
         start=fq_length-startini+1
         substring=String(fq_seq[start:start+minimum_polyA_length-1])
-        if substring[1]=='A' #first symbol of apolyA strech must be A
+        if substring[1]=='A' && substring[minimum_polyA_length]=='A' #first and last symbol of a polyA strech must be A
             ct=0
             for symb in substring
                 if symb != 'A'
@@ -31,7 +40,7 @@ function detect_polyA_in_a_string(
             if ct <=maximum_non_A_symbols
                 has_poly_a=true
                 if debug
-                    println("substring having less than $maximum_non_A_symbols non A symbols")
+                    println("substring having at most than $maximum_non_A_symbols non A symbols")
                     println(substring)
                 end
                 break
