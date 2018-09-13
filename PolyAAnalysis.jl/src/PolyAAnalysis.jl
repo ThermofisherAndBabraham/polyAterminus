@@ -13,12 +13,13 @@ __precompile__()
 module PolyAAnalysis
 
 export
-    add_features,
+    annotate_polya_sites,
     check_polyA_prefixes,
     clust!,
     detect_polyA_in_a_string,
     enumeratenames!,
     extend_poly_A,
+    get_split_key,
     get_polyA_prefixes,
     get_transcripts_from_dict,
     get_transcripts_from_gff,
