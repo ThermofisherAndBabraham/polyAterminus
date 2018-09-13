@@ -1,8 +1,3 @@
-using BioSequences
-using Base.Test
-push!(LOAD_PATH, "../../")
-using PolyAAnalysis
-
 # """
 # function that trimmes 3 polyA tail of a given fastq entry and outputs trimmed read with number of polyA indicated in read's name
 # Arguments:
