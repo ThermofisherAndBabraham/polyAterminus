@@ -272,7 +272,7 @@ function get_polyA_prefixes(fasta_record::BioSequences.FASTA.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64)::Array{String,1}
     output=Array{String,1}()
-    re=Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length}")
+    re=Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length}+")
     for m in eachmatch(re, String(BioSequences.sequence(fasta_record)))
         prefix_part=m.match[1:minimum_not_polyA]
         push!(output,prefix_part)

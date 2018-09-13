@@ -155,18 +155,6 @@ function trim_polyA_from_files(
     #Create input streams
     r1_pipe_prefix,r2_pipe_prefix = create_input_pipes(fastq1,fastq2,number_of_workers)
 
-    #output files
-    fastqo1_f=output_prefix*"_R1_trimmedPolyA.fastq.gz"
-    fastqo2_f=output_prefix*"_R2_trimmedPolyA.fastq.gz"
-    fastqo_s_f=output_prefix*"_PolyA.fastq.gz"
-    fastqo_d_f=output_prefix*"_discarded.fastq.gz"
-    # @everywere test=open("test1.fq"
-
-    fastqo1=open(fastqo1_f,"w")
-    fastqo2=open(fastqo2_f,"w")
-    fastqo_s=open(fastqo_s_f,"w")
-    fastqo_d=open(fastqo_d_f,"w")
-
     #counter for jobs
     ct_jobs=0
     jub_submision_finished=false
@@ -179,6 +167,10 @@ function trim_polyA_from_files(
     ct_pair_without_polyA = convert(SharedArray, zeros(Int64, nworkers()))
     ct_pair_with_proper_polyA = convert(SharedArray, zeros(Int64, nworkers()))
     ct_pair_with_discarded_polyA = convert(SharedArray, zeros(Int64, nworkers()))
+    ct_output_chunks = convert(SharedArray, zeros(Int64, nworkers()))
+    # a special counter to check that a worker has fnished processing its chink of data.
+    # value 1 marks that it has finished
+    ct_finished = convert(SharedArray, zeros(Int64, nworkers()))
 
 
 
@@ -187,53 +179,46 @@ function trim_polyA_from_files(
     @everywhere function trim_polyA_from_fastq_pair_pararell(
             r1_pipe_prefix::String,
             r2_pipe_prefix::String,
-            out1::String,
+            fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
             ct_all::SharedArray{Int64,1},
             ct_pair_without_polyA::SharedArray{Int64,1},
             ct_pair_with_proper_polyA::SharedArray{Int64,1},
             ct_pair_with_discarded_polyA::SharedArray{Int64,1},
+            ct_finished::SharedArray{Int64,1},
+            ct_output_chunks::SharedArray{Int64,1},
             prefixes::Array{String,1},
             minimum_not_polyA::Int64,
             minimum_polyA_length::Int64,
             maximum_non_A_symbols::Int64,
             maximum_distance_with_prefix_database::Int64,
             minimum_poly_A_between::Int64,
-            include_polyA::Bool,
-            l;
+            include_polyA::Bool;
             debug_id="None",
-            debug=false
+            debug=false,
+            buffer_size=10000
             )
 
 
-            if myid() == 2
-                lock(l)
-            end
-
-            println(l)
-
-            exit()
-
+            #input streams for r1 and r2
             r1_input_b = open(r1_pipe_prefix*"_"*string(myid()-1),"r")
             r2_input_b = open(r2_pipe_prefix*"_"*string(myid()-1),"r")
-
-            out1_f=open(out1,"w") #open(out1*"_"*string((myid()-1)),"w")
+            # initialise buffers for collect of processed reads
+            fastq1_b=IOBuffer()
+            fastq2_b=IOBuffer()
+            fastq_s_b=IOBuffer()
+            fastq_d_b=IOBuffer()
+            #counrer for processed fastq entries per a process
+            ct_local=0
             for   (fastq1, fastq2) in zip(FASTQ.Reader(r1_input_b),FASTQ.Reader(r2_input_b))
-                fastq1_b=IOBuffer()
-                fastq2_b=IOBuffer()
-                fastq_s_b=IOBuffer()
-                fastq_d_b=IOBuffer()
+                ct_local+=1
                 ct_all[(myid()-1)] += 1
                 has_proper_polyA=false
                 polyA_detected=false
-
                 if debug_id == FASTQ.identifier(fastq1)
                     debug=true
                 else
                     debug=false
                 end
-
-
-
                 fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
                                                                 fastq1,
                                                                 fastq2,
@@ -278,53 +263,72 @@ function trim_polyA_from_files(
                     end
                 end
                 #write out
-                fastq1_b_s=String(fastq1_b)
-                fastq2_b_s=String(fastq2_b)
-                fastq_s_b_s=String(fastq_s_b)
-                fastq_d_b_s=String(fastq_d_b)
 
-                if fastq1_b_s != ""   fastq1_b_z=String(transcode(GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
-                if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
-                if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
-                if fastq_d_b_s != ""   fastq_d_b_z=String(transcode(GzipCompressor,fastq_d_b_s)) else fastq_d_b_z="" end
-
-                write(out1_f,fastq1_b_z)
-                flush(out1_f)
-                close(fastq1_b)
-                close(fastq2_b)
-                close(fastq_s_b)
-                close(fastq_d_b)
-
-
-
+                if ct_local == buffer_size
+                    #put colected data to output pipe
+                    ct_local=0
+                    fastq1_b_s=String(fastq1_b)
+                    fastq2_b_s=String(fastq2_b)
+                    fastq_s_b_s=String(fastq_s_b)
+                    fastq_d_b_s=String(fastq_d_b)
+                    if fastq1_b_s != ""   fastq1_b_z=String(transcode(GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
+                    if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
+                    if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
+                    if fastq_d_b_s != ""   fastq_d_b_z=String(transcode(GzipCompressor,fastq_d_b_s)) else fastq_d_b_z="" end
+                    put!(fastqo_1_2_s_d,(fastq1_b_z,fastq2_b_z,fastq_s_b_z,fastq_d_b_z))
+                    close(fastq1_b)
+                    close(fastq2_b)
+                    close(fastq_s_b)
+                    close(fastq_d_b)
+                    fastq1_b=IOBuffer()
+                    fastq2_b=IOBuffer()
+                    fastq_s_b=IOBuffer()
+                    fastq_d_b=IOBuffer()
+                    ct_output_chunks[(myid()-1)]+= 1
+                end
             end
+        #put to output pipe the final fraction
+        fastq1_b_s=String(fastq1_b)
+        fastq2_b_s=String(fastq2_b)
+        fastq_s_b_s=String(fastq_s_b)
+        fastq_d_b_s=String(fastq_d_b)
+        if fastq1_b_s != ""   fastq1_b_z=String(transcode(GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
+        if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
+        if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
+        if fastq_d_b_s != ""   fastq_d_b_z=String(transcode(GzipCompressor,fastq_d_b_s)) else fastq_d_b_z="" end
+        put!(fastqo_1_2_s_d,(fastq1_b_z,fastq2_b_z,fastq_s_b_z,fastq_d_b_z))
+        close(fastq1_b)
+        close(fastq2_b)
+        close(fastq_s_b)
+        close(fastq_d_b)
+        #close input buffers
         close(r1_input_b)
         close(r2_input_b)
-        close(out1_f)
-
-
+        ct_finished[(myid()-1)]=1
+        ct_output_chunks[(myid()-1)]+= 1
     end
 
 
-    l = ReentrantLock()
+
     for p in workers() # start tasks on the workers to process requests in parallel
 
               @async remote_do(trim_polyA_from_fastq_pair_pararell, p,
                                               r1_pipe_prefix,
                                               r2_pipe_prefix,
-                                              "test",
+                                              fastqo_1_2_s_d,
                                               ct_all,
                                               ct_pair_without_polyA,
                                               ct_pair_with_proper_polyA,
                                               ct_pair_with_discarded_polyA,
+                                              ct_finished,
+                                              ct_output_chunks,
                                               prefixes,
                                               minimum_not_polyA,
                                               minimum_polyA_length,
                                               maximum_non_A_symbols,
                                               maximum_distance_with_prefix_database,
                                               minimum_poly_A_between,
-                                              include_polyA,
-                                              l;
+                                              include_polyA;
                                               debug=debug,
                                               debug_id=debug_id
                                               )
@@ -333,39 +337,61 @@ function trim_polyA_from_files(
     jub_submision_finished=true
     println(STDERR, "Started analysis with $number_of_workers julia processes ")
 
-    while  true #!((ctout == sum(ct_all)) & jub_submision_finished) || ((ctout==0) && (sum(ct_all)==0))# print out results
+    #writing out files
+
+    function write_from_pipe(
+        fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
+        ct_output_chunks::SharedArray{Int64,1},
+        ct_finished::SharedArray{Int64,1},
+        output_prefix::String)
+        ctout = 0
+        #output files
+        fastqo1_f=output_prefix*"_R1_trimmedPolyA.fastq.gz"
+        fastqo2_f=output_prefix*"_R2_trimmedPolyA.fastq.gz"
+        fastqo_s_f=output_prefix*"_PolyA.fastq.gz"
+        fastqo_d_f=output_prefix*"_discarded.fastq.gz"
+
+        fastqo1=open(fastqo1_f,"w")
+        fastqo2=open(fastqo2_f,"w")
+        fastqo_s=open(fastqo_s_f,"w")
+        fastqo_d=open(fastqo_d_f,"w")
+
+
+        number_of_workers=length(ct_finished)
+        while true
+            fastqo1_s,fastqo2_s,fastqo_s_s,fastqo_d_s  = take!(fastqo_1_2_s_d)
+            ctout+=1
+            write(fastqo1,fastqo1_s)
+            write(fastqo2,fastqo2_s)
+            write(fastqo_s,fastqo_s_s)
+            write(fastqo_d,fastqo_d_s)
+            if sum(ct_finished)==number_of_workers && ctout==sum(ct_output_chunks)
+                break
+            end
+        end
+        close(fastqo1)
+        close(fastqo2)
+        close(fastqo_s)
+        close(fastqo_d)
+
+    end
+
+    @schedule write_from_pipe(fastqo_1_2_s_d, ct_output_chunks, ct_finished, output_prefix)
+
+    number_of_workers = length(ct_finished)
+
+    while  sum(ct_finished) < number_of_workers #!((ctout == sum(ct_all)) & jub_submision_finished) || ((ctout==0) && (sum(ct_all)==0))# print out results
             sleep(1)
             print(STDERR, "Parsed reads: ",sum(ct_all),
             " without polyA: ",sum(ct_pair_without_polyA),
             " with proper polyA: ",sum(ct_pair_with_proper_polyA),
             " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
     end
+    print(STDERR, "Parsed reads: ",sum(ct_all),
+    " without polyA: ",sum(ct_pair_without_polyA),
+    " with proper polyA: ",sum(ct_pair_with_proper_polyA),
+    " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\n")
 
-    # ctout=0
-    #
-    # while  true #!((ctout == sum(ct_all)) & jub_submision_finished) || ((ctout==0) && (sum(ct_all)==0))# print out results
-    #     ctout+=1
-    #     println("KUKU",ctout)
-    #     fastqo1_s,fastqo2_s,fastqo_s_s,fastqo_d_s  = take!(fastqo_1_2_s_d)
-    #     write(fastqo1,fastqo1_s)
-    #     write(fastqo2,fastqo2_s)
-    #     write(fastqo_s,fastqo_s_s)
-    #     write(fastqo_d,fastqo_d_s)
-    #     if mod(ctout,1000)==0
-    #         print(STDERR, "Parsed reads: ",sum(ct_all),
-    #         " without polyA: ",sum(ct_pair_without_polyA),
-    #         " with proper polyA: ",sum(ct_pair_with_proper_polyA),
-    #         " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
-    #     end
-    # end
-    # print(STDERR, "Parsed reads: ",sum(ct_all),
-    # " without polyA: ",sum(ct_pair_without_polyA),
-    # " with proper polyA: ",sum(ct_pair_with_proper_polyA),
-    # " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\n")
-    # close(fastqo1)
-    # close(fastqo2)
-    # close(fastqo_s)
-    # close(fastqo_d)
 end
 
 
