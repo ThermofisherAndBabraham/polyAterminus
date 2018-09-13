@@ -443,7 +443,7 @@ elif (reference != None):
                 "-c -g {params.ref} 2>&1 | tee -a {log}"
 
 else:
-    sys.exit("ERROR: (REFERENCE, GFF) or transcripts files does not exist!")
+    sys.exit("ERROR: reference, gff3 or transcripts files does not exist!")
 
 rule annotate_polyA:
     input:
