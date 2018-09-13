@@ -52,7 +52,7 @@ import GenomicFeatures: Strand
 import StringDistances: Levenshtein, evaluate
 import TranscodingStreams
 
-include("MapPolyA.jl")
+include("AnnotatePolyA.jl")
 include("ParseGFF.jl")
 include("TrimmPolyA.jl")
 
