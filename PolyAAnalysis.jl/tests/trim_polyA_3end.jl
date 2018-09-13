@@ -1,8 +1,3 @@
-using BioSequences
-using Base.Test
-push!(LOAD_PATH, "../../")
-using PolyAAnalysis
-
 # """
 # function that trimmes 3' end of polyA having sequence from non A symbols that might originate fue to reamins of adapters or sequencing artefacts
 # Arguments:

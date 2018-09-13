@@ -63,9 +63,6 @@ function check_polyA_prefixes(
     fqo_trimmed::FASTQ.Record,
     prefixes::Array{String,1},
     maximum_distance_with_prefix_database::Int64
-
-
-
     )::Bool
     has_no_match=true
     for pref in prefixes
@@ -268,12 +265,12 @@ Arguments:
     minimum_not_polyA - minimum length of not polyA strech
     minimum_polyA_length - minimum length of polyA strech
 """
-function get_polyA_prefixes(fasta_record::BioSequences.FASTA.Record,
+function get_polyA_prefixes(fasta_record::FASTA.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64)::Array{String,1}
     output=Array{String,1}()
-    re=Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length}")
-    for m in eachmatch(re, String(BioSequences.sequence(fasta_record)))
+    re=Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length,}")
+    for m in eachmatch(re, String(sequence(fasta_record)))
         prefix_part=m.match[1:minimum_not_polyA]
         push!(output,prefix_part)
     end
@@ -288,7 +285,7 @@ Arguments:
     minimum_polyA_length - minimum length of polyA strech
     counter - shared array for tracking processed reads - length matches julia workers
 """
-function get_polyA_prefixes(fasta_record::BioSequences.FASTA.Record,
+function get_polyA_prefixes(fasta_record::FASTA.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     counter::SharedArray)::Array{String,1}
@@ -330,7 +327,7 @@ function trim_polyA_from_fastq_pair(
     polyA_detected=false
     has_proper_polyA=false
     seq_for_read=String(FASTQ.sequence(fastq1))
-    revseq_rev_read=String(BioSequences.reverse_complement!(FASTQ.sequence(fastq2)))
+    revseq_rev_read=String(reverse_complement!(FASTQ.sequence(fastq2)))
 
     if debug
         println("for_read:", "\n", fastq1, "\n")
@@ -456,7 +453,7 @@ function trim_polyA_from_fastq_pair(
     #         #         name=FASTQ.identifier(fqo_trimmed)
     #         #         description=FASTQ.description(fqo_trimmed)
     #         #         rev_quality=reverse(FASTQ.quality(fqo_trimmed))
-    #         #         rev_seq=BioSequences.reverse_complement!(FASTQ.sequence(fqo_trimmed))
+    #         #         rev_seq=reverse_complement!(FASTQ.sequence(fqo_trimmed))
     #         #         fqo_trimmed_rev=FASTQ.Record(name, description, rev_seq, rev_quality)
     # 		# 		println(fastqo12, (fqo_trimmed,fqo_trimmed_rev))
     #         #     end

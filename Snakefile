@@ -336,7 +336,8 @@ rule star_index:
 
 rule alignment_polyA_reads:
     input:
-        fastq = tmp + "/{stem}_PolyA.fastq.gz",
+        tmp + "/{stem}_R1_trimmedPolyA.fastq.gz",
+        tmp + "/{stem}_R2_trimmedPolyA.fastq.gz",
         genomeDir = directory(reference + "_STAR_annotation")
     output:
         out + "/STAR/{stem}_polyA.bam",
@@ -358,7 +359,7 @@ rule alignment_polyA_reads:
             "--genomeDir {input.genomeDir} --runMode alignReads " +
             "--outSAMunmapped Within " +
             "--outFileNamePrefix {params.prefix} " +
-            "--readFilesIn {input.fastq} --readFilesCommand zcat " +
+            "--readFilesIn {input[0]} {input[1]} --readFilesCommand zcat " +
             "--genomeLoad NoSharedMemory " +
             "--outSAMstrandField intronMotif --outSAMattributes All " +
             "--outSAMtype BAM Unsorted " +
@@ -417,8 +418,32 @@ elif (gff != None and reference != None):
                 "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
                 "-c -g {params.ref} -f {params.gff} 2>&1 | tee -a {log}"
 
+elif (reference != None):
+    rule trim_polyA_reads:
+            input:
+                tmp + "/{stem}_R1_001subs.fastq.gz" ,
+                tmp + "/{stem}_R2_001subs.fastq.gz"
+            output:
+                tmp + "/{stem}_R1_trimmedPolyA.fastq.gz",
+                tmp + "/{stem}_R2_trimmedPolyA.fastq.gz",
+                tmp + "/{stem}_PolyA.fastq.gz",
+                tmp + "/{stem}_discarded.fastq.gz"
+            benchmark:
+                "benchmarks/{stem}_trim_polyA_reads.log"
+            log:
+                logs + "/TRIMMING-POLYA/{stem}.log"
+            params:
+                output_stem = tmp + "/{stem}",
+                ref = reference
+            threads:
+                julia_threads
+            shell:
+                "julia --depwarn=no scripts/mark_poly_A.jl -i -p {threads} " +
+                "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
+                "-c -g {params.ref} 2>&1 | tee -a {log}"
+
 else:
-    sys.exit("ERROR: (REFERENCE, GFF) or transcripts files does not exist!")
+    sys.exit("ERROR: reference, gff3 or transcripts files does not exist!")
 
 rule annotate_polyA:
     input:

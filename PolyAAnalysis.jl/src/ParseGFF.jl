@@ -1,17 +1,15 @@
 #!/usr/bin/env julia
 
-using BioSequences
-using FastaIO
-using GenomicFeatures
-
-
 """
-returns array of transcripts from reference genome and gff3 file
-Arguments:
-    fa - reference genome file in fasta format
-    gff - reference genome gff3 file
+    get_transcripts_from_gff(fa::String, gff::String)
+
+    Computes and returns array of transcripts from reference genome and gff3 file.
+
+    # Arguments
+    - `fa::String`: path to fasta file of reference genome.
+    - `gff::String`: path to gff3 transcripts file.
 """
-function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.FASTA.Record,1}
+function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1}
 
     # Reads Gff file generates dict chr => [transcriptsPositions]
     println("Reading GFF")
@@ -26,10 +24,10 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
     tic()
 
     for record in reader
-        featureType = GenomicFeatures.GFF3.featuretype(record)
+        featureType = GFF3.featuretype(record)
         # Check if new feature found, then push exons
         if featureType == "transcript" || featureType == "mRNA"
-            if currtrans != string(GenomicFeatures.GFF3.attributes(record, "ID")[1]) && currtrans != ""
+            if currtrans != string(GFF3.attributes(record, "ID")[1]) && currtrans != ""
                 if coordex == ""
                     println(STDERR,"ERROR! Exon is empty!")
                 else
@@ -42,9 +40,9 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
                     ct += 1
                 end
             end
-            chr = string(GenomicFeatures.GFF3.seqid(record))
-            currtrans = string(GenomicFeatures.GFF3.attributes(record, "ID")[1])
-            strnd = string(GenomicFeatures.GFF3.strand(record))
+            chr = string(GFF3.seqid(record))
+            currtrans = string(GFF3.attributes(record, "ID")[1])
+            strnd = string(GFF3.strand(record))
             # Check if chr exist in dict
             if !(haskey(transdict,chr))
                 transdict[chr] = []
@@ -52,10 +50,10 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.F
             coordex = ""
 
         elseif featureType == "exon"
-            strpos = string(GenomicFeatures.GFF3.seqstart(record))
-            endpos = string(GenomicFeatures.GFF3.seqend(record))
+            strpos = string(GFF3.seqstart(record))
+            endpos = string(GFF3.seqend(record))
 
-            if currtrans == GenomicFeatures.GFF3.attributes(record, "Parent")[1]
+            if currtrans == GFF3.attributes(record, "Parent")[1]
                 coordex = coordex * strpos * "-" * endpos * ","
             else
                 println(STDERR,"ERROR! Exon before transcript.")
@@ -94,14 +92,18 @@ end
 
 
 """
-returns array of biosequences from fasta record and dictonary with exons intervals
-Arguments:
-    record - fasta record
-    gff - dictonary with exons intervals
+    get_transcripts_from_dict(record::BioSequences.FASTA.Record, transdict::Dict)
+
+    Function returns an array of FASTA recors splitted into fragment by given size.
+
+    # Arguments
+    - `record::BioSequences.FASTA.Record`: Fasta record of sequence.
+    - `size::Int64`: size of fragment.
 """
-function get_transcripts_from_dict(record::BioSequences.FASTA.Record,
-    transdict::Dict)::Array{BioSequences.FASTA.Record,1}
-    outrecords = Array{BioSequences.FASTA.Record,1}()
+function get_transcripts_from_dict(record::FASTA.Record,
+    transdict::Dict)::Array{FASTA.Record,1}
+
+    outrecords = Array{FASTA.Record,1}()
     chr = FASTA.identifier(record)
 
     if haskey(transdict,chr)

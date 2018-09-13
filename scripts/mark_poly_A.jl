@@ -34,25 +34,33 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     use_cached_results::Bool=true)
 
     # file for caching
-    if (file != nothing)
-        jldFile = file*"_exracted_polyA_prefixes.jdl"
-    elseif (gff != nothing && genomeFa != nothing)
-        jldFile = gff*"_exracted_polyA_prefixes.jdl"
+    if file != nothing
+        jldFile = file * "_test_exracted_polyA_prefixes.jdl"
+    elseif gff != nothing && genomeFa != nothing
+        jldFile = gff * "_exracted_polyA_prefixes.jdl"
+    elseif genomeFa != nothing
+        jldFile = genomeFa * "_exracted_polyA_prefixes.jdl"
     end
 
     if !isfile(jldFile) | !use_cached_results
         # Open files and prepare decompression stream
-        if (file != nothing)
+        if file != nothing
             file_stream = open(file,"r")
         	if file[length(file)-2:end] == ".gz"
             	file_stream = GzipDecompressorStream(file_stream)
         	end
             collectedFasta = collect(FASTA.Reader(file_stream))
             close(file_stream)
-        elseif (gff != nothing && genomeFa != nothing)
-            collectedFasta = get_transcripts_from_gff(genomeFa, gff)
+
+        elseif gff != nothing && genomeFa != nothing
+            collectedFasta = get_transcripts_from_gff(genomeFa, gff )
+
+        elseif genomeFa != nothing
+            file_stream = open(genomeFa,"r")
+            collectedFasta = collect(FASTA.Reader(file_stream))
+            close(file_stream)
         else
-            println(STDERR,"ERROR! Missing transcripts or gff and reference files")
+            println(STDERR,"ERROR! Missing transcripts, gff, reference files")
         end
         # Start julia worker processors
     	# Crate counter for progress nonitoring
@@ -60,6 +68,7 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     	# Arry to collect results for output
         all_result = Array{String,1}()
         # Parse transcripts
+        println(STDERR,"Collecting PolyA")
         time = @elapsed result = @parallel  (vcat) for record in collectedFasta
             get_polyA_prefixes(record,minimum_not_polyA,
                               minimum_polyA_length,counter)
@@ -161,11 +170,11 @@ function trim_polyA_from_files(
     ct_pair_with_proper_polyA = convert(SharedArray, zeros(Int64, nworkers()))
     ct_pair_with_discarded_polyA = convert(SharedArray, zeros(Int64, nworkers()))
 
-    const fastqpairs = RemoteChannel(()->Channel{ Array{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1} }(100));
+    const fastqpairs = RemoteChannel(()->Channel{ Array{Tuple{FASTQ.Record,FASTQ.Record},1} }(100));
     const fastqo_1_2_s_d = RemoteChannel(()->Channel{Tuple{String,String,String,String} }(100));
 
     @everywhere function trim_polyA_from_fastq_pair_pararell(
-            fastq_pairs::RemoteChannel{Channel{Array{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1}}},
+            fastq_pairs::RemoteChannel{Channel{Array{Tuple{FASTQ.Record,FASTQ.Record},1}}},
             fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
             ct_all::SharedArray{Int64,1},
             ct_pair_without_polyA::SharedArray{Int64,1},
@@ -231,7 +240,7 @@ function trim_polyA_from_files(
                             name = FASTQ.identifier(fqo_trimmed)
                             description = FASTQ.description(fqo_trimmed)
                             rev_quality = reverse(FASTQ.quality(fqo_trimmed))
-                            rev_seq = BioSequences.reverse_complement!(FASTQ.sequence(fqo_trimmed))
+                            rev_seq = reverse_complement!(FASTQ.sequence(fqo_trimmed))
                             fqo_trimmed_rev = FASTQ.Record(name, description, rev_seq, rev_quality)
                             println(fastq1_b,fqo_trimmed)
                             println(fastq2_b,fqo_trimmed_rev)
@@ -354,7 +363,7 @@ function trim_polyA_from_files(
     #     #     println(typeof(p))
     #     # end
     #     # exit()
-    #     #records_pairs SubArray{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1,Array{Tuple{BioSequences.FASTQ.Record,BioSequences.FASTQ.Record},1},Tuple{UnitRange{Int64}},true}
+    #     #records_pairs SubArray{Tuple{FASTQ.Record,FASTQ.Record},1,Array{Tuple{FASTQ.Record,FASTQ.Record},1},Tuple{UnitRange{Int64}},true}
     #
     #     trim_polyA_from_fastq_pairs(
     #                                 records_pairs,
