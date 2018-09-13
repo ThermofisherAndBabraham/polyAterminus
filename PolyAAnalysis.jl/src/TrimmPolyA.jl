@@ -242,8 +242,8 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
         i-=1
     end
 
-    polyA_start=first_nona_position+1
-    polyA_length=seq_len-polyA_start+1
+    polyA_start = first_nona_position+1
+    polyA_length = seq_len-polyA_start+1
 
     if (polyA_start > 0) & (polyA_start > minimum_not_polyA)
         not_poly_a_seq=seq[1:polyA_start-1]
@@ -277,10 +277,12 @@ Arguments:
 function get_polyA_prefixes(fasta_record::FASTA.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64)::Array{String,1}
-    output=Array{String,1}()
-    re=Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length,}")
+
+    output = Array{String,1}()
+    re = Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length,}")
+
     for m in eachmatch(re, String(sequence(fasta_record)))
-        prefix_part=m.match[1:minimum_not_polyA]
+        prefix_part = m.match[1:minimum_not_polyA]
         push!(output,prefix_part)
     end
     return(output)
@@ -298,10 +300,10 @@ function get_polyA_prefixes(fasta_record::FASTA.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     counter::SharedArray)::Array{String,1}
-    output=get_polyA_prefixes(fasta_record,minimum_not_polyA,minimum_polyA_length)
+    output = get_polyA_prefixes(fasta_record,minimum_not_polyA,minimum_polyA_length)
     counter[(myid()-1)] += 1
     total_jobs = sum(counter)
-    if mod(total_jobs,10000)==0
+    if mod(total_jobs,10000) == 0
       print(STDERR,"Number of parsed transcripts = $total_jobs\r")
     end
     return(output)
@@ -333,10 +335,11 @@ function trim_polyA_from_fastq_pair(
     debug_id="None",
     debug=false
     )
-    polyA_detected=false
-    has_proper_polyA=false
-    seq_for_read=String(FASTQ.sequence(fastq1))
-    revseq_rev_read=String(reverse_complement!(FASTQ.sequence(fastq2)))
+
+    polyA_detected = false
+    has_proper_polyA = false
+    seq_for_read = String(FASTQ.sequence(fastq1))
+    revseq_rev_read = String(reverse_complement!(FASTQ.sequence(fastq2)))
 
     if debug
         println("for_read:", "\n", fastq1, "\n")
@@ -347,7 +350,6 @@ function trim_polyA_from_fastq_pair(
         println("Is polyA in revseq_rev_read: ", detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols))
         println("used parameter: minimum_polyA_length $minimum_polyA_length, maximum_non_A_symbols $maximum_non_A_symbols")
     end
-
 
     if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols) &&
         detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols)
@@ -374,11 +376,10 @@ function trim_polyA_from_fastq_pair(
                 end
             end
     else
-        fqo_trimmed=fastq1
+        fqo_trimmed = fastq1
     end
     return(fqo_trimmed, has_proper_polyA, polyA_detected)
 end
-
 
 
 """
@@ -416,10 +417,11 @@ function trim_polyA_from_fastq_pair(
     fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}};
     debug_id="None",
     debug=false   )
-    fastq1_b=IOBuffer()
-    fastq2_b=IOBuffer()
-    fastq_s_b=IOBuffer()
-    fastq_d_b=IOBuffer()
+
+    fastq1_b = IOBuffer()
+    fastq2_b = IOBuffer()
+    fastq_s_b = IOBuffer()
+    fastq_d_b = IOBuffer()
     (fastq1, fastq2) = take!(fastq_pairs)
     close(fastq1_b)
     close(fastq2_b)
@@ -478,7 +480,4 @@ function trim_polyA_from_fastq_pair(
     # 		" with proper polyA: ",sum(ct_pair_with_proper_polyA),
     # 		" with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
     # 	end
-
-
-
 end
