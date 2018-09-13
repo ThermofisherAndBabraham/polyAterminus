@@ -100,31 +100,33 @@ Splits reading of files in such a number of named pipes what matches number of a
 Each worker reads a separate fraction of all reads (ex. in case of 3 workers - 1/3).
 """
 function create_input_pipes(r1::String,r2::String, number_of_workers::Int64)::Tuple{String,String}
-    r1_filename=basename(r1)
-    r2_filename=basename(r2)
-    rand_suffix= randstring()
-    r1_filename_tmp_prefix_ini="/tmp/"*r1_filename*rand_suffix
-    r2_filename_tmp_prefix_ini="/tmp/"*r2_filename*rand_suffix
-    start=0
-    step=0
+
+    r1_filename = basename(r1)
+    r2_filename = basename(r2)
+    rand_suffix = randstring()
+    r1_filename_tmp_prefix_ini = "/tmp/" * r1_filename * rand_suffix
+    r2_filename_tmp_prefix_ini = "/tmp/" * r2_filename * rand_suffix
+    start = 0
+    step = 0
 
     for i in range(1,number_of_workers)
-        r1_filename_tmp_prefix=r1_filename_tmp_prefix_ini*"_"*string(i)
-        r2_filename_tmp_prefix=r2_filename_tmp_prefix_ini*"_"*string(i)
-        start = 4*i-3
-        step = 4*number_of_workers
+        r1_filename_tmp_prefix = r1_filename_tmp_prefix_ini * "_" * string(i)
+        r2_filename_tmp_prefix = r2_filename_tmp_prefix_ini * "_" * string(i)
+        start = 4 * i - 3
+        step = 4 * number_of_workers
+
         if isfifo(r1_filename_tmp_prefix)
             rm(r1_filename_tmp_prefix)
         end
+
         if isfifo(r2_filename_tmp_prefix)
             rm(r2_filename_tmp_prefix)
         end
 
-        cmd1="mkfifo $r1_filename_tmp_prefix ; zcat  $r1 | sed -ne '$start~$step{N;N;N;p}'> $r1_filename_tmp_prefix & "
-        cmd2="mkfifo $r2_filename_tmp_prefix ; zcat  $r2 | sed -ne '$start~$step{N;N;N;p}'> $r2_filename_tmp_prefix & "
+        cmd1 = "mkfifo $r1_filename_tmp_prefix ; zcat  $r1 | sed -ne '$start~$step{N;N;N;p}'> $r1_filename_tmp_prefix & "
+        cmd2 = "mkfifo $r2_filename_tmp_prefix ; zcat  $r2 | sed -ne '$start~$step{N;N;N;p}'> $r2_filename_tmp_prefix & "
         run(`bash -c $cmd1`)
         run(`bash -c $cmd2`)
-
     end
     println(STDERR, "prefixes of input streams for R1 reads are: $r1_filename_tmp_prefix_ini")
     println(STDERR, "prefixes of input streams for R2 reads are: $r2_filename_tmp_prefix_ini")
@@ -185,7 +187,7 @@ function trim_polyA_from_files(
 
 
 
-    const fastqo_1_2_s_d=RemoteChannel(()->Channel{Tuple{String,String,String,String} }(100));
+    const fastqo_1_2_s_d = RemoteChannel(()->Channel{Tuple{String,String,String,String} }(100));
 
     @everywhere function trim_polyA_from_fastq_pair_pararell(
             r1_pipe_prefix::String,
@@ -209,22 +211,23 @@ function trim_polyA_from_files(
             buffer_size=10000
             )
 
-
             #input streams for r1 and r2
             r1_input_b = open(r1_pipe_prefix*"_"*string(myid()-1),"r")
             r2_input_b = open(r2_pipe_prefix*"_"*string(myid()-1),"r")
             # initialise buffers for collect of processed reads
-            fastq1_b=IOBuffer()
-            fastq2_b=IOBuffer()
-            fastq_s_b=IOBuffer()
-            fastq_d_b=IOBuffer()
+            fastq1_b = IOBuffer()
+            fastq2_b = IOBuffer()
+            fastq_s_b = IOBuffer()
+            fastq_d_b = IOBuffer()
             #counrer for processed fastq entries per a process
-            ct_local=0
-            for   (fastq1, fastq2) in zip(FASTQ.Reader(r1_input_b),FASTQ.Reader(r2_input_b))
-                ct_local+=1
+            ct_local = 0
+
+            for (fastq1, fastq2) in zip(FASTQ.Reader(r1_input_b),FASTQ.Reader(r2_input_b))
+                ct_local += 1
                 ct_all[(myid()-1)] += 1
-                has_proper_polyA=false
-                polyA_detected=false
+                has_proper_polyA = false
+                polyA_detected = false
+
                 if debug_id == FASTQ.identifier(fastq1)
                     debug = true
                 else
@@ -276,11 +279,11 @@ function trim_polyA_from_files(
 
                 if ct_local == buffer_size
                     #put colected data to output pipe
-                    ct_local=0
-                    fastq1_b_s=String(fastq1_b)
-                    fastq2_b_s=String(fastq2_b)
-                    fastq_s_b_s=String(fastq_s_b)
-                    fastq_d_b_s=String(fastq_d_b)
+                    ct_local = 0
+                    fastq1_b_s = String(fastq1_b)
+                    fastq2_b_s = String(fastq2_b)
+                    fastq_s_b_s = String(fastq_s_b)
+                    fastq_d_b_s = String(fastq_d_b)
                     if fastq1_b_s != ""   fastq1_b_z=String(transcode(GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
                     if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
                     if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
@@ -290,18 +293,19 @@ function trim_polyA_from_files(
                     close(fastq2_b)
                     close(fastq_s_b)
                     close(fastq_d_b)
-                    fastq1_b=IOBuffer()
-                    fastq2_b=IOBuffer()
-                    fastq_s_b=IOBuffer()
-                    fastq_d_b=IOBuffer()
-                    ct_output_chunks[(myid()-1)]+= 1
+                    fastq1_b = IOBuffer()
+                    fastq2_b = IOBuffer()
+                    fastq_s_b = IOBuffer()
+                    fastq_d_b = IOBuffer()
+                    ct_output_chunks[(myid()-1)] += 1
                 end
             end
         #put to output pipe the final fraction
-        fastq1_b_s=String(fastq1_b)
-        fastq2_b_s=String(fastq2_b)
-        fastq_s_b_s=String(fastq_s_b)
-        fastq_d_b_s=String(fastq_d_b)
+        fastq1_b_s = String(fastq1_b)
+        fastq2_b_s = String(fastq2_b)
+        fastq_s_b_s = String(fastq_s_b)
+        fastq_d_b_s = String(fastq_d_b)
+
         if fastq1_b_s != ""   fastq1_b_z=String(transcode(GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
         if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
         if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
@@ -314,11 +318,9 @@ function trim_polyA_from_files(
         #close input buffers
         close(r1_input_b)
         close(r2_input_b)
-        ct_finished[(myid()-1)]=1
-        ct_output_chunks[(myid()-1)]+= 1
+        ct_finished[(myid()-1)] = 1
+        ct_output_chunks[(myid()-1)] += 1
     end
-
-
 
     for p in workers() # start tasks on the workers to process requests in parallel
               @async remote_do(trim_polyA_from_fastq_pair_pararell, p,
@@ -342,52 +344,52 @@ function trim_polyA_from_files(
                                               debug_id=debug_id
                                               )
     end
-    jub_submision_finished=true
+    jub_submision_finished = true
     println(STDERR, "Started analysis with $number_of_workers julia processes ")
 
     #writing out files
-
     function write_from_pipe(
         fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
         ct_output_chunks::SharedArray{Int64,1},
         ct_finished::SharedArray{Int64,1},
         output_prefix::String)
+
         ctout = 0
         #output files
-        fastqo1_f=output_prefix*"_R1_trimmedPolyA.fastq.gz"
-        fastqo2_f=output_prefix*"_R2_trimmedPolyA.fastq.gz"
-        fastqo_s_f=output_prefix*"_PolyA.fastq.gz"
-        fastqo_d_f=output_prefix*"_discarded.fastq.gz"
+        fastqo1_f = output_prefix * "_R1_trimmedPolyA.fastq.gz"
+        fastqo2_f = output_prefix * "_R2_trimmedPolyA.fastq.gz"
+        fastqo_s_f = output_prefix * "_PolyA.fastq.gz"
+        fastqo_d_f = output_prefix * "_discarded.fastq.gz"
 
-        fastqo1=open(fastqo1_f,"w")
-        fastqo2=open(fastqo2_f,"w")
-        fastqo_s=open(fastqo_s_f,"w")
-        fastqo_d=open(fastqo_d_f,"w")
+        fastqo1 = open(fastqo1_f,"w")
+        fastqo2 = open(fastqo2_f,"w")
+        fastqo_s = open(fastqo_s_f,"w")
+        fastqo_d = open(fastqo_d_f,"w")
 
+        number_of_workers = length(ct_finished)
 
-        number_of_workers=length(ct_finished)
         while true
             fastqo1_s,fastqo2_s,fastqo_s_s,fastqo_d_s  = take!(fastqo_1_2_s_d)
-            ctout+=1
+            ctout += 1
             write(fastqo1,fastqo1_s)
             write(fastqo2,fastqo2_s)
             write(fastqo_s,fastqo_s_s)
             write(fastqo_d,fastqo_d_s)
-            if sum(ct_finished)==number_of_workers && ctout==sum(ct_output_chunks)
+
+            if sum(ct_finished) == number_of_workers && ctout == sum(ct_output_chunks)
                 break
             end
         end
+
         close(fastqo1)
         close(fastqo2)
         close(fastqo_s)
         close(fastqo_d)
-
     end
 
     @schedule write_from_pipe(fastqo_1_2_s_d, ct_output_chunks, ct_finished, output_prefix)
 
     number_of_workers = length(ct_finished)
-
     while  sum(ct_finished) < number_of_workers #!((ctout == sum(ct_all)) & jub_submision_finished) || ((ctout==0) && (sum(ct_all)==0))# print out results
             sleep(1)
             print(STDERR, "Parsed reads: ",sum(ct_all),
@@ -399,7 +401,6 @@ function trim_polyA_from_files(
     " without polyA: ",sum(ct_pair_without_polyA),
     " with proper polyA: ",sum(ct_pair_with_proper_polyA),
     " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\n")
-
 end
 
 
