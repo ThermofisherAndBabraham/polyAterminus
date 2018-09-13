@@ -9,7 +9,7 @@
     - `fa::String`: path to fasta file of reference genome.
     - `gff::String`: path to gff3 transcripts file.
 """
-function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.FASTA.Record,1}
+function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1}
 
     # Reads Gff file generates dict chr => [transcriptsPositions]
     println("Reading GFF")
@@ -100,10 +100,10 @@ end
     - `record::BioSequences.FASTA.Record`: Fasta record of sequence.
     - `size::Int64`: size of fragment.
 """
-function get_transcripts_from_dict(record::BioSequences.FASTA.Record,
-    transdict::Dict)::Array{BioSequences.FASTA.Record,1}
+function get_transcripts_from_dict(record::FASTA.Record,
+    transdict::Dict)::Array{FASTA.Record,1}
 
-    outrecords = Array{BioSequences.FASTA.Record,1}()
+    outrecords = Array{FASTA.Record,1}()
     chr = FASTA.identifier(record)
 
     if haskey(transdict,chr)

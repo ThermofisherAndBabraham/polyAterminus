@@ -36,8 +36,7 @@ export
     wrframe
 
 import BioAlignments: BAM
-import BioSequences
-import BioSequences: BioSymbols, @dna_str, FASTA, reverse_complement!
+import BioSequences: BioSymbols, @dna_str, FASTA, reverse_complement!, sequence
 import BioSequences: FASTQ
 import BufferedStreams
 import CodecZlib

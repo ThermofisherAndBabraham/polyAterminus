@@ -1,31 +1,31 @@
 ##
-## function get_transcripts_from_gff(record::BioSequences.FASTA.Record,
-##    transDict::Dict)::Array{BioSequences.FASTA.Record,1}
+## function get_transcripts_from_gff(record::FASTA.Record,
+##    transDict::Dict)::Array{FASTA.Record,1}
 ##
 
 dcAll = Dict("Seq" => [String("1-5,8-12,+"), String("1-5,+"), String("1-20,+")])
 append!(dcAll["Seq"],[String("1-5,8-12,-"), String("1-5,-"), String("1-20,-")])
-outRecordsAll=Array{BioSequences.FASTA.Record,1}()
+outRecordsAll=Array{FASTA.Record,1}()
 
 # + strand testing
 record = FASTA.Record("Seq", dna"GTGGTGGCGCTCACCGACTG")
 dc = Dict("Seq" => [String("1-5,8-12,+")])
 recordOut = FASTA.Record("Seq", dna"GTGGTCGCTC")
-outRecords = Array{BioSequences.FASTA.Record,1}()
+outRecords = Array{FASTA.Record,1}()
 push!(outRecords,recordOut)
 push!(outRecordsAll,recordOut)
 @test outRecords == get_transcripts_from_dict(record,dc)
 
 dc = Dict("Seq" => [String("1-5,+")])
 recordOut = FASTA.Record("Seq", dna"GTGGT")
-outRecords = Array{BioSequences.FASTA.Record,1}()
+outRecords = Array{FASTA.Record,1}()
 push!(outRecords,recordOut)
 push!(outRecordsAll,recordOut)
 @test outRecords == get_transcripts_from_dict(record,dc)
 
 dc = Dict("Seq" => [String("1-20,+")])
 recordOut = FASTA.Record("Seq", dna"GTGGTGGCGCTCACCGACTG")
-outRecords = Array{BioSequences.FASTA.Record,1}()
+outRecords = Array{FASTA.Record,1}()
 push!(outRecords,recordOut)
 push!(outRecordsAll,recordOut)
 @test outRecords == get_transcripts_from_dict(record,dc)
@@ -33,21 +33,21 @@ push!(outRecordsAll,recordOut)
 # - strand testing
 dc = Dict("Seq" => [String("1-5,8-12,-")])
 recordOut = FASTA.Record("Seq", dna"GAGCGACCAC")
-outRecords = Array{BioSequences.FASTA.Record,1}()
+outRecords = Array{FASTA.Record,1}()
 push!(outRecords,recordOut)
 push!(outRecordsAll,recordOut)
 @test outRecords == get_transcripts_from_dict(record,dc)
 
 dc = Dict("Seq" => [String("1-5,-")])
 recordOut = FASTA.Record("Seq", dna"ACCAC")
-outRecords = Array{BioSequences.FASTA.Record,1}()
+outRecords = Array{FASTA.Record,1}()
 push!(outRecords,recordOut)
 push!(outRecordsAll,recordOut)
 @test outRecords == get_transcripts_from_dict(record,dc)
 
 dc = Dict("Seq" => [String("1-20,-")])
 recordOut = FASTA.Record("Seq", dna"CAGTCGGTGAGCGCCACCAC")
-outRecords = Array{BioSequences.FASTA.Record,1}()
+outRecords = Array{FASTA.Record,1}()
 push!(outRecords,recordOut)
 push!(outRecordsAll,recordOut)
 @test outRecords == get_transcripts_from_dict(record,dc)
@@ -56,7 +56,7 @@ push!(outRecordsAll,recordOut)
 @test outRecordsAll == get_transcripts_from_dict(record,dcAll)
 
 ##
-##  function get_transcripts_from_gff(fa::String, gff::String)::Array{BioSequences.FASTA.Record,1}
+##  function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1}
 ##
 
 # Creating Temp Files (gff and fasta) for testing.
@@ -141,7 +141,7 @@ write(writer,FASTA.Record("chr1", dna"TACTGCCTGCATAAGGAGAACGGAGTTGCCAAGGACGAAAGC
 write(writer,FASTA.Record("chr2", dna"TACTGCCTGCATAAGGAGAACGGAGTTGCCAAGGACGAAAGCGACTCTAGGTTCTAACCGTCGACTTTGGCGGAAAGGTTTCACTCAGGAAGCAGACACT"))
 close(writer)
 
-outRecords = Array{BioSequences.FASTA.Record,1}()
+outRecords = Array{FASTA.Record,1}()
 push!(outRecords,FASTA.Record("Seq", dna"TACTGCCTGCATAAGGAGAACAAGGACGAAAGCGACTCTAGGTTCTAACCGCTTTGGCGGAAAGGTT"))
 push!(outRecords,FASTA.Record("Seq", dna"ACTGCCTGCATAAGACGGAGTTGCCAAGGAGAAAGCGACGGTTCTAACCGTCGACGCGGAAAGGTTTCAGGAAGCAG"))
 push!(outRecords,FASTA.Record("Seq", dna"AACCTTTCCGCCAAAGCGGTTAGAACCTAGAGTCGCTTTCGTCCTTGTTCTCCTTATGCAGGCAGTA"))
