@@ -389,7 +389,7 @@ if (transcripts != None):
         threads:
             julia_threads
         shell:
-            "julia --depwarn=no scripts/mark_poly_A.jl -i -p {threads} " +
+            "julia --depwarn=no PolyAAnalysis.jl/scripts/mark_poly_A.jl -i -p {threads} " +
             "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
             "-c -r {params.gz} 2>&1 | tee -a {log}"
 
@@ -414,7 +414,7 @@ elif (gff != None and reference != None):
             threads:
                 julia_threads
             shell:
-                "julia --depwarn=no scripts/mark_poly_A.jl -i -p {threads} " +
+                "julia --depwarn=no PolyAAnalysis.jl/scripts/mark_poly_A.jl -i -p {threads} " +
                 "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
                 "-c -g {params.ref} -f {params.gff} 2>&1 | tee -a {log}"
 
@@ -438,7 +438,7 @@ elif (reference != None):
             threads:
                 julia_threads
             shell:
-                "julia --depwarn=no scripts/mark_poly_A.jl -i -p {threads} " +
+                "julia --depwarn=no PolyAAnalysis.jl/scripts/mark_poly_A.jl -i -p {threads} " +
                 "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
                 "-c -g {params.ref} 2>&1 | tee -a {log}"
 
@@ -462,5 +462,5 @@ rule annotate_polyA:
         pref = out + "/ANNOTATE-POLYA/{stem}"
     shell:
         "export JULIA_NUM_THREADS={threads}; julia --depwarn=no " +
-        "scripts/map_polyA.jl -b {input} -o {params.pref} " +
+        "PolyAAnalysis.jl/scripts/annotate_polyA.jl -b {input} -o {params.pref} " +
         "-g {params.gff} &> {log}"
