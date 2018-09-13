@@ -33,7 +33,11 @@ stems = get_stems(config["INPUT-DIR"])
 
 # ------------------------------ Directories---------------------------------- #
 
-input_dir = config["INPUT-DIR"]
+if config["INPUT-DIR"][-1] == "/":
+    input_dir = config["INPUT-DIR"][0:-2]
+else:
+    input_dir = config["INPUT-DIR"]
+
 if config["TMP-DIR"][-1] == "/":
     tmp = config["TMP-DIR"][0:-2]
 else:
@@ -58,7 +62,6 @@ logs = out+"/"+"LOGS"
 # ------------------------------ MACHINE ------------------------------------- #
 
 threads = config["MACHINE"]["threads"]
-memory = config["MACHINE"]["memory"]
 star_threads = config["MAPPING"]["STAR"]["threads"]
 julia_threads = config["MACHINE"]["threads_julia"]
 memory_java = config["MACHINE"]["memory_java"]
@@ -77,8 +80,8 @@ rule all:
     input:
         expand(out + "/STAR/{stem}_polyA.bam", out=out, stem=stems),
         expand(out + "/STAR/{stem}Log.final.out", out=out, stem=stems),
-        expand(out + "/MAPPED_POLYA/{stem}_detected_polyA.tsv", out=out, stem=stems),
-        expand(out + "/MAPPED_POLYA/{stem}_mapped_polyA.bed", out=out, stem=stems),
+        expand(out + "/ANNOTATE-POLYA/{stem}_detected_polyA.tsv", out=out, stem=stems),
+        expand(out + "/ANNOTATE-POLYA/{stem}_annotated_polyA.bed", out=out, stem=stems),
         out + "/fastqc_report_raw_reads.html",
         out + "/fastqc_report_processed_reads.html"
 
@@ -230,7 +233,7 @@ if config["SUBSAMPLING"]["run"]:
                 input_dir + "/{stem}_R1_001.fastq.gz",
                 tmp + "/{stem}_R1_001Trimmed.fastq.gz"
             output:
-                "{tmp}/{stem}_read_counts.txt"
+                tmp + "/{stem}_read_counts.txt"
             benchmark:
                 "benchmarks/{stem}_count_reads.log"
             params:
@@ -269,15 +272,11 @@ else:
             tmp + "/{stem}_R2_001subs.fastq.gz"
         benchmark:
             "benchmarks/{stem}_subsampling.log"
-        params:
-            tmp = tmp,
-            f1 = "{stem}_R1_001subs.fastq.gz",
-            f2 = "{stem}_R2_001subs.fastq.gz"
         threads:
-            threads
+            1
         shell:
-            "cd {params.tmp} ; cp  ../{input[0]}  {params.f1} ; " +
-            "cp   ../{input[1]} {params.f2} ; cd .. "
+            "cp {input[0]}  {output[0]}; " +
+            "cp {input[1]} {output[1]}"
 
 
 # ------------------------ analysis of 3' coverages -------------------------- #
@@ -446,22 +445,22 @@ elif (reference != None):
 else:
     sys.exit("ERROR: (REFERENCE, GFF) or transcripts files does not exist!")
 
-rule mapping_polyA:
+rule annotate_polyA:
     input:
         out + "/STAR/{stem}_polyA.bam"
     output:
-        out + "/MAPPED_POLYA/{stem}_detected_polyA.tsv",
-        out + "/MAPPED_POLYA/{stem}_mapped_polyA.bed"
+        out + "/ANNOTATE-POLYA/{stem}_detected_polyA.tsv",
+        out + "/ANNOTATE-POLYA/{stem}_annotated_polyA.bed"
     benchmark:
         "benchmarks/{stem}_mapping_polyA.log"
     log:
-        logs + "/{stem}_mapped_polyA.log"
+        logs + "/ANNOTATE-POLYA/{stem}_mapped_polyA.log"
     threads:
         julia_threads
     params:
         gff = gff,
-        pref = out + "/MAPPED_POLYA/{stem}"
+        pref = out + "/ANNOTATE-POLYA/{stem}"
     shell:
         "export JULIA_NUM_THREADS={threads}; julia --depwarn=no " +
         "scripts/map_polyA.jl -b {input} -o {params.pref} " +
-        "-g {params.gff} 2> {log}"
+        "-g {params.gff} &> {log}"
