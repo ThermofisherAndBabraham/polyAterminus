@@ -15,10 +15,11 @@ include("trim_polyA_3end.jl")
 include("trim_polyA_from_fastq_record.jl")
 end
 
-@testset "MapPolyA" begin
-include("MapPolyA.jl")
+@testset "AnnotatePolyA" begin
+include("AnnotatePolyA.jl")
 end
 
-
-
+@testset "ParseGFF" begin
+include("ParseGFF.jl")
+end
 end #module TestPolyAanalsis

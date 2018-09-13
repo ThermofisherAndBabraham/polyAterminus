@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 
 
-function BamRead(bam::String)
+function readbam(bam::String)
 
     reader = open(BAM.Reader, bam)
     record = BAM.Record()
@@ -17,7 +17,8 @@ function BamRead(bam::String)
             flag = BAM.flag(record)
             treads += 1
 
-            if (flag&4 == 0) && (flag&256 == 0) && (flag&2048 == 0)
+            # skip not primary aligned, supplementary alignment
+            if (flag&256 == 0) && (flag&2048 == 0)
                 spl = split(BAM.tempname(record),":")
 
                 if flag&16 == 0
@@ -33,7 +34,7 @@ function BamRead(bam::String)
                 if spl[2] == "A" && strness != "."
                     pareads += 1
                     cps = rfname * "::" * string(pos) * "::" * strness
-                    pclus = Clust!(pclus, cps, parse(Int16, spl[1]))
+                    pclus = clust!(pclus, cps, parse(Int16, spl[1]))
                 end
 
                 passreads += 1
@@ -45,7 +46,7 @@ function BamRead(bam::String)
 end
 
 
-function Clust!(d::Dict, p::Any, l::Any)::Dict
+function clust!(d::Dict, p::Any, l::Any)::Dict
 
     if haskey(d, p)
         v = d[p]
@@ -58,7 +59,13 @@ function Clust!(d::Dict, p::Any, l::Any)::Dict
 end
 
 
-function PolACalculus(d::Dict{String,Array{Int16,1}})::DataFrame
+"""
+    stats_poly_a(d::Dict{String,Array{Int16,1}})
+
+    Collects simple statistics on polyA sites.
+    Returns a dataframe.
+"""
+function stats_poly_a(d::Dict{String,Array{Int16,1}})::DataFrame
     dframe = DataFrame(Chrmosome=String[], Position=Int32[], Strand=String[], Median=Float16[], Minimum=Int16[], Maximum=Int16[], Counts=Int32[])
 
     for k in keys(d)
@@ -73,33 +80,85 @@ function PolACalculus(d::Dict{String,Array{Int16,1}})::DataFrame
 end
 
 
-function WrFrame(fname::String, data::DataFrame, delim::Char)
-    if !isfile(fname)
-        CSV.write(fname, data, delim=delim)
-    else
-        CSV.write(fname, data, delim=delim, append=true, header=false)
-    end
+function wrframe(fname::String, data::DataFrame, delim::Char)
+    CSV.write(fname, data, delim=delim)
 end
 
 
-function ParseGFF3(gff3file::String)::IntervalCollection{String}
-    intcol = IntervalCollection{String}()
+function parseGFF3(gff3file::String)::Dict{String, IntervalCollection{String}}
+    intcol = Dict{String, IntervalCollection{String}}()
 
     for record in open(GFF3.Reader, gff3file)
         chr::String = GFF3.seqid(record)
         start::Int = GFF3.seqstart(record)
         seqend::Int = GFF3.seqend(record)
         strand::Strand = GFF3.strand(record)
+        split_k = get_split_key(chr, start, seqend)
+        mdstr = parserecord(record)
 
-        mdstr = ParseRecord(record)
-        push!(intcol, Interval(chr, start, seqend, strand, mdstr))
+        for i in split_k
+            if haskey(intcol, i)
+                push!(intcol[i], Interval(chr, start, seqend, strand, mdstr))
+            else
+                intcol[i] = IntervalCollection{String}()
+                push!(intcol[i], Interval(chr, start, seqend, strand, mdstr))
+            end
+        end
     end
 
     return intcol
 end
 
+"""
+    get_split_key(chr::String, x::Int64, y::Int64; step::Int64=10000)
 
-function ParseRecord(r::GFF3.Record)::String
+    Calculates ranges depending on the step and gff3 coordinates.
+"""
+function get_split_key(chr::String, x::Int64, y::Int64; step::Int64=10000)::Array{String,1}
+
+    a = Array{String,1}()
+
+    function get_interval(x::Int64,y::Int64)
+        if x >= y
+            if x%y == 0
+                ix1 = x - y + 1
+                ix2 = x
+            else
+                ix1 = x - x%y + 1
+                ix2 = x - x%y + y
+            end
+        else
+            ix1 = 1
+            ix2 = y
+        end
+
+        return ix1:ix2
+    end
+
+    interv = get_interval(x, step)
+
+    if y in interv
+        push!(a, chr*":"*string(interv))
+    else
+        push!(a, chr*":"*string(interv))
+        interv2 = get_interval(y, step)
+
+        if interv[end] == interv2[1]
+            push!(a, chr*":"*string(interv2))
+        else
+            for i in interv[end]:step:interv2[1]-1
+                ix1=i+1
+                ix2=i+step
+                push!(a, chr*":"*string(ix1:ix2))
+            end
+        end
+    end
+
+    return a
+end
+
+
+function parserecord(r::GFF3.Record)::String
 
     md::String = ""
 
@@ -187,7 +246,12 @@ function ParseRecord(r::GFF3.Record)::String
 end
 
 
-function GetIntervalSet(dframe::DataFrame)::IntervalCollection{String}
+"""
+    getintervals(dframe::DataFrame)
+
+    Returns a collection of intervals from a polyA sites dataframe.
+"""
+function getintervals(dframe::DataFrame)::IntervalCollection{String}
 
     intcol = IntervalCollection{String}()
 
@@ -210,10 +274,20 @@ function GetIntervalSet(dframe::DataFrame)::IntervalCollection{String}
     return intcol
 end
 
-""" Function searches for overlaping intervals.
-"""
-function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFrame
 
+"""
+    annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCollection{String}})
+
+    Function searches for overlaping intervals. If overlapped - adds annotation
+    to the dataframe. If not - add NA.
+
+    # Arguments
+    - `a::IntervalCollection`: a collection of intervals of PolyA sites.
+    - `b::Dict{String, IntervalCollection{String}}`: a dictionary with a sorted collections of intervals from gff3.
+"""
+function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCollection{String}})::DataFrame
+
+    # Two dataframes for '+' and '-' strands.
     dfp = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
                     Counts=Int32[], Strand=String[], Feature=String[],
                     Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
@@ -221,39 +295,63 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
                     Counts=Int32[], Strand=String[], Feature=String[],
                     Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
-    for i in eachoverlap(a, b)
-        if strand(i[1]) == strand(i[2])
-            splt1::Array{SubString{String},1} = split(metadata(i[1]),";")
-            splt::Array{SubString{String},1} = split(metadata(i[2]),";")
+    for i1 in a
+        ct = Int64(0)
+        # parse metadata from polyA site
+        splt1::Array{SubString{String},1} = split(metadata(i1),";")
+        c = parse(Int32,split(splt1[4],"=")[2])
+        str = string(strand(i1))
+        me = parse(Float32,split(splt1[1],"=")[2])
+        mi = parse(Int16,split(splt1[2],"=")[2])
+        mx = parse(Int16,split(splt1[3],"=")[2])
+        chr = seqname(i1)
+        it1 = first(i1)
+        it2 = last(i1)
 
-            geneID = split(splt[3],"=")[2]
-            gn = split(splt[6],"=")[2]
-            c = parse(Int32,split(splt1[4],"=")[2])
-            str = string(strand(i[1]))
-            ft = split(splt[7],"=")[2]
-            me = parse(Float32,split(splt1[1],"=")[2])
-            mi = parse(Int16,split(splt1[2],"=")[2])
-            mx = parse(Int16,split(splt1[3],"=")[2])
-            bt = split(splt[5],"=")[2]
-            if strand(i[1]) == Strand('-')
-                push!(dfn, [seqname(i[1]) first(i[1]) last(i[1]) gn c str ft me mi mx bt])
+        # assuming that start and end is the same of the polyA site.
+        split_k = get_split_key(chr, it1, it2)[1]
+
+        try
+            for i2 in b[split_k]
+                if chechoverlap(i1, i2)
+                    # parse metadata from GFF3 anotation
+                    splt::Array{SubString{String},1} = split(metadata(i2),";")
+                    ft = split(splt[7],"=")[2]
+                    gn = split(splt[6],"=")[2]
+                    bt = split(splt[5],"=")[2]
+                    ct += 1
+                    if strand(i1) == Strand('-')
+                        push!(dfn, [seqname(i1) it1 it2 gn c str ft me mi mx bt])
+                    else
+                        push!(dfp, [seqname(i1) it1 it2 gn c str ft me mi mx bt])
+                    end
+                end
+            end
+        catch
+            KeyError(split_k)
+        end
+
+        # if no overlaping of polyA coordinates with GFF3 annotated coordinates - NA is added.
+        if ct == 0
+            ft = "NA"
+            gn = "NA"
+            bt = "NA"
+
+            if strand(i1) == Strand('-')
+                push!(dfn, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
             else
-                push!(dfp, [seqname(i[1]) first(i[1]) last(i[1]) gn c str ft me mi mx bt])
+                push!(dfp, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
             end
         end
     end
 
-    sort!(dfn, [:Start, :End, :Name], rev=true)
-    sort!(dfp, [:Start, :End, :Name])
+    sort!(dfn, [:Chr, :Start, :End, :Name], rev=true)
+    sort!(dfp, [:Chr, :Start, :End, :Name])
 
     dfp = rmdups(dfp)
     dfn = rmdups(dfn)
 
     enumeratenames!(dfn)
-
-    ct = Int64(0)
-    l = size(dfp)[1]
-
     enumeratenames!(dfp)
 
     df = vcat(dfp, dfn)
@@ -262,16 +360,51 @@ function ItsectCollection(a::IntervalCollection, b::IntervalCollection)::DataFra
 end
 
 
-""" Function enumerates gene names in the data frame by incremention.
+"""
+    chechoverlap(i1::Interval, i2::Interval)
+
+    Checks if intervals overlap.
+"""
+function chechoverlap(i1::Interval, i2::Interval)::Bool
+
+    # only if chr match and strand match
+    if cmp(seqname(i1), seqname(i2)) == 0 && strand(i1) == strand(i2)
+        if i2.first <= i1.last && i2.first >= i1.first
+            return true
+        elseif i2.last <= i1.last && i2.last >= i1.first
+            return true
+        elseif i1.first <= i2.last && i1.first >= i2.first
+            return true
+        elseif i1.last >= i2.first && i1.last <= i2.last
+            return true
+        else
+            return false
+        end
+    else
+        return false
+    end
+
+end
+
+
+"""
+    enumeratenames!(df::DataFrame)
+
+    Enumerates gene names in the data frame by adding incrementing number.
 """
 function enumeratenames!(df::DataFrame)::DataFrame
 
     ct = Int64(0)
     l = size(df)[1]
+    na_ct = Int64(0)
 
     for (i, x) in enumerate(eachrow(df))
         ct += 1
-        if i+1 <= l
+
+        if x[4] == "NA" && i+1 <= l
+            na_ct += 1
+            x[4] = x[4]*".$na_ct"
+        elseif i+1 <= l
             if x[4] == eachrow(df)[i+1][4]
                 x[4] = x[4]*".$ct"
             else
@@ -288,8 +421,12 @@ function enumeratenames!(df::DataFrame)::DataFrame
 end
 
 
-""" Remove duplicated entries differentiating by feature.
-    Featues are rated by their meaningfulness depth.
+"""
+    rmdups(dframe::DataFrame)
+
+    Removes duplicated entries differentiating by feature.
+    DataFrame should be sorted by Chr, Start, End and gene name.
+    Featues are rated by their annotation hierarchy.
     Keeps most accurate feature (gene has exons and introns, etc.).
 """
 function rmdups(dframe::DataFrame)::DataFrame
@@ -301,7 +438,7 @@ function rmdups(dframe::DataFrame)::DataFrame
     d = Dict("gene"=>13, "transcript"=>12,"exon"=>11, "intron"=>10, "CDS"=>9,
              "UTR"=>8, "three_prime_UTR"=>7, "five_prime_UTR"=>6,
              "polyA_sequence"=>5, "polyA_site"=>4, "start_codon"=>3,
-             "stop_codon"=>2, "Selenocysteine"=>1)
+             "stop_codon"=>2, "Selenocysteine"=>1, "NA"=>0)
 
     ct = Int64(0)
     ct2 = Int64(0)

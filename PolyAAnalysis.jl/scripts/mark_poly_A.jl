@@ -16,63 +16,78 @@ push!(LOAD_PATH, ".")
 using PolyAAnalysis
 
 
-
-
-
 """
 returns minimum kmer streches of not polyA ins a supplied transcript sequences from a file
 Arguments:
-    sequence - string with polyA streches (type - BioSequences reference seq)
+    file - string with path to transcripts fasta file
+    genomeFa - reference genome fasta file
+    gff - reference gff file with transcripts and exons
     minimum_not_polyA - minimum length of not polyA strech
     minimum_polyA_length - minimum length of polyA strech
     number_of_workers - number of julia processes
     use_cached_results - use already calculated results
 """
-function get_polyA_prefixes_from_file(file::String;
+function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     minimum_not_polyA::Int64=20,
     minimum_polyA_length::Int64=20,
     number_of_workers::Int64=4,
     use_cached_results::Bool=true)
 
-
-    #file for caching
-    jldFile=file*"_exracted_polyA_prefixes.jdl"
+    # file for caching
+    if file != nothing
+        jldFile = file * "_test_exracted_polyA_prefixes.jdl"
+    elseif gff != nothing && genomeFa != nothing
+        jldFile = gff * "_exracted_polyA_prefixes.jdl"
+    elseif genomeFa != nothing
+        jldFile = genomeFa * "_exracted_polyA_prefixes.jdl"
+    end
 
     if !isfile(jldFile) | !use_cached_results
-
         # Open files and prepare decompression stream
+        if file != nothing
+            file_stream = open(file,"r")
+        	if file[length(file)-2:end] == ".gz"
+            	file_stream = GzipDecompressorStream(file_stream)
+        	end
+            collectedFasta = collect(FASTA.Reader(file_stream))
+            close(file_stream)
 
-        file_stream=open(file,"r")
-    	if file[length(file)-2:end] == ".gz"
-        	file_stream=GzipDecompressorStream(file_stream)
-    	end
+        elseif gff != nothing && genomeFa != nothing
+            collectedFasta = get_transcripts_from_gff(genomeFa, gff )
+
+        elseif genomeFa != nothing
+            file_stream = open(genomeFa,"r")
+            collectedFasta = collect(FASTA.Reader(file_stream))
+            close(file_stream)
+        else
+            println(STDERR,"ERROR! Missing transcripts, gff, reference files")
+        end
         # Start julia worker processors
-
-    	#Crate counter for progress nonitoring
+    	# Crate counter for progress nonitoring
         counter = convert(SharedArray, zeros(Int64, nworkers()))
     	# Arry to collect results for output
-        all_result=Array{String,1}()
-        #Parse transcripts
-        time= @elapsed result= @parallel  (vcat) for record in collect(FASTA.Reader(file_stream))
+        all_result = Array{String,1}()
+        # Parse transcripts
+        println(STDERR,"Collecting PolyA")
+        time = @elapsed result = @parallel  (vcat) for record in collectedFasta
             get_polyA_prefixes(record,minimum_not_polyA,
                               minimum_polyA_length,counter)
-         end
-    	#get unique prefixes
-        all_result=unique(result)
-        number_of_unque_prefixes=length(all_result)
+        end
+    	# get unique prefixes
+        all_result = unique(result)
+        number_of_unque_prefixes = length(all_result)
         println(STDERR, "Colected $number_of_unque_prefixes unique polyA prefixes in known transcripts in $time s")
-        if use_cached_results
 
+        if use_cached_results
             save(File(format"JLD",jldFile), "all_result", all_result,compress=true)
             println(STDERR, "Colected unique polyA prefixes in known transcripts are saved in file $jldFile")
         end
 
-    	close(file_stream)
     else
         println(STDERR ,"Loading colected unique polyA prefixes in known transcriptsfrom  file $jldFile")
         data = load(jldFile)
         all_result = data["all_result"]
-        number_of_unque_prefixes=length(all_result)
+        number_of_unque_prefixes = length(all_result)
         println(STDERR, "Loaded $number_of_unque_prefixes unique polyA prefixes in known transcripts")
     end
 
@@ -134,7 +149,6 @@ Arguments:
     chunk_fastq_analysis - Fastq pairs which are analysed together
 
 """
-
 function trim_polyA_from_files(
     fastq1::String,
     fastq2::String,
@@ -154,11 +168,10 @@ function trim_polyA_from_files(
     r1_pipe_prefix,r2_pipe_prefix = create_input_pipes(fastq1,fastq2,number_of_workers)
 
     #counter for jobs
-    ct_jobs=0
-    jub_submision_finished=false
-
-    debug_id="ST-E00243:412:HKCGMCCXY:1:1120:14357:35432"
-    debug=true
+    ct_jobs = 0
+    jub_submision_finished = false
+    debug_id = "ST-E00243:412:HKCGMCCXY:1:1120:14357:35432"
+    debug = true
 
     #Counters for specific pairs
     ct_all = convert(SharedArray, zeros(Int64, nworkers()))
@@ -213,9 +226,9 @@ function trim_polyA_from_files(
                 has_proper_polyA=false
                 polyA_detected=false
                 if debug_id == FASTQ.identifier(fastq1)
-                    debug=true
+                    debug = true
                 else
-                    debug=false
+                    debug = false
                 end
                 fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
                                                                 fastq1,
@@ -240,22 +253,21 @@ function trim_polyA_from_files(
                     println(fastq1_b,fastq1)
                     println(fastq2_b,fastq2)
                 else
-                    a=1
+                    a = 1
                     if has_proper_polyA
                         println(fastq_s_b,fqo_trimmed)
             			ct_pair_with_proper_polyA[(myid()-1)] += 1
                         #get reverse complement of the polyA read
                         if include_polyA
-                            name=FASTQ.identifier(fqo_trimmed)
-                            description=FASTQ.description(fqo_trimmed)
-                            rev_quality=reverse(FASTQ.quality(fqo_trimmed))
-                            rev_seq=BioSequences.reverse_complement!(FASTQ.sequence(fqo_trimmed))
-                            fqo_trimmed_rev=FASTQ.Record(name, description, rev_seq, rev_quality)
+                            name = FASTQ.identifier(fqo_trimmed)
+                            description = FASTQ.description(fqo_trimmed)
+                            rev_quality = reverse(FASTQ.quality(fqo_trimmed))
+                            rev_seq = reverse_complement!(FASTQ.sequence(fqo_trimmed))
+                            fqo_trimmed_rev = FASTQ.Record(name, description, rev_seq, rev_quality)
                             println(fastq1_b,fqo_trimmed)
                             println(fastq2_b,fqo_trimmed_rev)
                         end
                     else
-
                         println(fastq_d_b,fastq1)
             			ct_pair_with_discarded_polyA[(myid()-1)] += 1
                     end
@@ -309,7 +321,6 @@ function trim_polyA_from_files(
 
 
     for p in workers() # start tasks on the workers to process requests in parallel
-
               @async remote_do(trim_polyA_from_fastq_pair_pararell, p,
                                               r1_pipe_prefix,
                                               r2_pipe_prefix,
@@ -330,7 +341,6 @@ function trim_polyA_from_files(
                                               debug=debug,
                                               debug_id=debug_id
                                               )
-
     end
     jub_submision_finished=true
     println(STDERR, "Started analysis with $number_of_workers julia processes ")
@@ -399,41 +409,49 @@ function main(args)
     arg_parse_settings = ArgParseSettings(description="Program trims polyA from the 3' end and modifies read name @[numberofAat3']_[originalname]")
     @add_arg_table arg_parse_settings begin
         "--output","-o"
-            help="Output prefix"
+            help = "Output prefix"
             required = true
             arg_type = String
 
         "--fastq-f","-a"
-            help="Input fatstq forward (R1) reads"
+            help = "Input fatstq forward (R1) reads"
             required = true
             arg_type = String
         "--fastq-r","-b"
-            help="Input fatstq reverse (R2) reads"
+            help = "Input fatstq reverse (R2) reads"
             required = true
             arg_type = String
         "--minimum-length","-m"
-            help="Minimum length of not polyA sequence"
+            help = "Minimum length of not polyA sequence"
             required = false
             arg_type = Int64
             default = 20
         "--minimum-polyA-length","-l"
-            help="Minimum length of  polyA sequence"
+            help = "Minimum length of  polyA sequence"
             required = false
             arg_type = Int64
             default = 10 #10
         "--reference-transcripts","-r"
-            help="Reference transcripts in fasta format"
-            required = true
+            help = "Reference transcripts in fasta format"
+            required = false
+            arg_type = String
+        "--reference-genome","-g"
+            help = "Reference genome in fasta format"
+            required = false
+            arg_type = String
+        "--reference-gff","-f"
+            help = "Reference gff3 file"
+            required = false
             arg_type = String
 
         "--use-precalculated-reference-transcripts-prefixes","-c"
-            help="Load polyA prefixes from previous run"
+            help = "Load polyA prefixes from previous run"
             action = :store_true
         "--incude-polyA-in-output","-i"
             help="Includes output polyA sequences as pseudo pair end's  into output fastq pair"
             action = :store_true
         "--processes","-p"
-            help="Number of additional julia workers for parallel procesing"
+            help = "Number of additional julia workers for parallel procesing"
             required = true
             arg_type = Int64
 
@@ -452,15 +470,14 @@ function main(args)
     eval(macroexpand(quote @everywhere push!(LOAD_PATH, ".") end))
     eval(macroexpand(quote @everywhere using PolyAAnalysis end))
 
-
-    polyA_prefixes=get_polyA_prefixes_from_file(parsed_args["reference-transcripts"],
+    polyA_prefixes = get_polyA_prefixes_from_file(parsed_args["reference-transcripts"],
+    parsed_args["reference-genome"],
+    parsed_args["reference-gff"],
     minimum_not_polyA=parsed_args["minimum-length"],
     minimum_polyA_length=parsed_args["minimum-polyA-length"],
     number_of_workers=parsed_args["processes"],
     use_cached_results=parsed_args["use-precalculated-reference-transcripts-prefixes"])
     tic()
-
-    #
 
     trim_polyA_from_files(
         parsed_args["fastq-f"],
@@ -468,7 +485,6 @@ function main(args)
         polyA_prefixes,
         parsed_args["processes"],
         parsed_args["output"],
-
         parsed_args["minimum-length"],
         parsed_args["minimum-polyA-length"],
         1, # maximum_non_A_symbols::Int64,
@@ -477,15 +493,6 @@ function main(args)
         parsed_args["incude-polyA-in-output"]
         )
     toc()
-
-
-
-
-
-
-    #= Main code =#
-
-
 end
 
 main(ARGS)

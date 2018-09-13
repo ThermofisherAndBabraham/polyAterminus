@@ -13,42 +13,47 @@ __precompile__()
 module PolyAAnalysis
 
 export
-    trim_polyA_file_records,
-    trim_polyA_from_fastq_record,
-    get_polyA_prefixes,
-    detect_polyA_in_a_string,
-    extend_poly_A,
-    trim_polyA_3end,
+    annotate_polya_sites,
     check_polyA_prefixes,
-    trim_polyA_from_fastq_pair,
-    BamRead,
-    Clust!,
-    PolACalculus,
-    ParseGFF3,
-    ParseRecord,
-    GetIntervalSet,
-    ItsectCollection,
+    clust!,
+    detect_polyA_in_a_string,
+    enumeratenames!,
+    extend_poly_A,
+    get_polyA_prefixes,
+    get_split_key,
+    get_transcripts_from_dict,
+    get_transcripts_from_gff,
+    getintervals,
+    parseGFF3,
+    parserecord,
+    readbam,
     rmdups,
-    WrFrame
+    stats_poly_a,
+    trim_polyA_3end,
+    trim_polyA_file_records,
+    trim_polyA_from_fastq_pair,
+    trim_polyA_from_fastq_record,
+    wrframe
 
 import BioAlignments: BAM
+import BioSequences: BioSymbols, @dna_str, FASTA, reverse_complement!, sequence
+import BioSequences: FASTQ
+import BufferedStreams
+import CodecZlib
+import CSV
 import DataFrames: DataFrame, DataFrameRow
 import DataFrames: eachrow, deleterows!
 import DataStructures
-import CSV
+import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, first, last
 import GenomicFeatures: GFF3
 import GenomicFeatures: Interval
-import GenomicFeatures: Strand
 import GenomicFeatures: IntervalCollection
-import GenomicFeatures: eachoverlap, isoverlapping, strand, metadata, seqname, first, last
-import BioSequences: FASTQ
-import BioSequences
+import GenomicFeatures: Strand
 import StringDistances: Levenshtein, evaluate
 import TranscodingStreams
-import CodecZlib
-import BufferedStreams
 
-include("MapPolyA.jl")
+include("AnnotatePolyA.jl")
+include("ParseGFF.jl")
 include("TrimmPolyA.jl")
 
 end  # module PolyAAnalysis

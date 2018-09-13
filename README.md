@@ -34,7 +34,7 @@ You can install  the dependencies manually or through conda environment as indic
     conda config --add channels conda-forge
     conda config --add channels bioconda
     conda config --add channels anaconda
-    conda config --add channels r
+    conda config --add channels defaults
 ```
 2. Create your `conda` environment:
  ```bash
@@ -59,19 +59,31 @@ You can install  the dependencies manually or through conda environment as indic
 ```
 
 
-## Notes for `config.yaml`
+## Notes for analysis configuration `config.yaml`
 
-* `Threads`: Consider is as how many parallel programs should be run on your PC.
-* `memory`: restricts parallelism. Consider as threads.
-* `memory_java`: for human 120 GB is recommended.
+* `threads`: consider is as how many parallel programs should be running on your PC.
+* `memory_java`: for human 60 GB is recommended.
 * `threads_julia`: usually no more than 8.
-* `threads_star`:
+* `threads_star`: max as you wish.
+* `SCRATCH`: location of tmp directory for faster computation (SSD).
+* `REFERENCE`: genome in fasta format.
+* `polyA_ref`: polyA reference for `bbduk` trimmer.
+* `GFF3` and `GTF`: should be the same version.
+
+* If you want to normalize all samples by lowest read number found:
+`SUBSAMPLING:`
+    `run: true`
+* If you want to subsample to specific read number:
+`SUBSAMPLING:`
+    `run: true`
+    `subsample_to: N`
 
 ## TODO
 
-- [ ]  `output`: should be correct output for all necessary files.
-- [ ]  `environment`: all applications should be added.
-- [ ]  Tests for `MapPolyA.jl`
-- [ ]  Check strands after parsing Bam in `MapPolyA.jl`
-- [ ]  Test `rmdups()` in `MapPolyA.jl`
-- [ ]  Align all rule names.
+- [x]  `output`: should be correct output for all necessary files.
+- [x]  `environment`: all applications should be added.
+- [x]  Tests for `MapPolyA.jl`
+- [x]  Check strands after parsing Bam in `MapPolyA.jl`
+- [x]  Test `rmdups()` in `MapPolyA.jl`
+- [ ]  Align all rule names and code.
+- [ ]  Add documentation.
