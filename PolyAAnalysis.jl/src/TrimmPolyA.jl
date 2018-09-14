@@ -1,39 +1,42 @@
 #!/usr/bin/env julia
 
 """
+    function detect_polyA_in_a_string(fq_seq::String,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64;maximum_search_fragment_length::Int64=50,debug=false)
 
-function detect_polyA_in_a_string(
-    fq_seq::String,
-    minimum_polyA_length::Int64,
-    maximum_non_A_symbols::Int64;
-    debug=false
-    )::Bool
+    Checks if a string of a read contains polyA strechA starting seach from the 3'.
+    Once a g search once a strech is found. A first and last symbol of a strech must be A.
 
-Checks if a string of a read contains polyA strechA starting seach from the 3'
-Once a g search once a strech is found. A first and last symbol of a strech must be A.
-    fq_seq - string for testing
-    minimum_polyA_length - minimum length of polyA strech
-    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
+    # Arguments
+    - `fq_seq`: string for testing.
+    - `minimum_polyA_length`: minimum length of polyA strech.
+    - `maximum_non_A_symbols`: maximum numer of nonA symbols in polyA strech.
+    - `maximum_search_fragment_length`: fragment length from 3' end.
 """
 function detect_polyA_in_a_string(
     fq_seq::String,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64;
+    maximum_search_fragment_length::Int64=50,
     debug=false
     )::Bool
 
+    if maximum_non_A_symbols == 1
+        return detect_polyA_in_a_string(fq_seq,minimum_polyA_length,maximum_search_fragment_length,debug)
+    end
+
     has_poly_a = false
     fq_length = length(fq_seq)
-    window_position_from_3_end = 0
+    window_position_from_3_end = minimum_polyA_length
+    startini = minimum_polyA_length
 
-    for startini in minimum_polyA_length:fq_length
+    while (window_position_from_3_end < maximum_search_fragment_length) && (startini  != fq_length)
         window_position_from_3_end += 1
         start = fq_length - startini + 1
+        # skip searching for polyA far from the  right end
         substring = String(fq_seq[start:start+minimum_polyA_length-1])
 
         if substring[1]=='A' && substring[minimum_polyA_length]=='A' #first and last symbol of a polyA strech must be A
             ct = 0
-
             for symb in substring
                 if symb != 'A'
                     ct += 1
@@ -50,8 +53,55 @@ function detect_polyA_in_a_string(
                 break
             end
         end
+        startini+=1
     end
+
     return(has_poly_a)
+end
+
+
+function detect_polyA_in_a_string(
+    fq_seq::String,
+    minimum_polyA_length::Int64,
+    maximum_search_fragment_length::Int64,
+    debug::Bool
+    )::Bool
+
+    fq_seq = uppercase(fq_seq)
+    fq_length = length(fq_seq)
+
+    if fq_length <= maximum_search_fragment_length
+        println(STDERR,"ERROR! Sequence too short to detect polyA")
+        return false
+    end
+
+    fq_seq = fq_seq[end-maximum_search_fragment_length:end]
+    min_l = Int64(minimum_polyA_length / 2)
+    re = Regex("(A+[GTC])?(A{$min_l,})([GTC]A+)?")
+
+    for m in eachmatch(re,fq_seq)
+
+        if m[1] == nothing
+            len1 = 0
+        else
+            len1 = length(m[1])
+        end
+
+        if m[3] == nothing
+            len3 = 0
+        else
+            len3 = length(m[3])
+        end
+
+        len2 = length(m[2])
+
+        if len2 >= minimum_polyA_length
+            return true
+        elseif len1 + len2 >= minimum_polyA_length || len3 + len2 >= minimum_polyA_length
+            return true
+        end
+    end
+    return false
 end
 
 
