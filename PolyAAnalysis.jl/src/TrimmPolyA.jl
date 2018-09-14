@@ -73,10 +73,14 @@ function detect_polyA_in_a_string(
     fq_length = length(fq_seq)
 
     if fq_length <= maximum_search_fragment_length
-        if debug
-            println(STDERR,"ERROR! Sequence too short to detect polyA")
+        if fq_length < minimum_polyA_length
+            if debug
+                println(STDERR,"ERROR! Sequence too short to detect polyA")
+            end
+            return false
+        else
+            maximum_search_fragment_length = fq_length - 1
         end
-        return false
     end
 
     fq_seq = fq_seq[end-maximum_search_fragment_length:end]

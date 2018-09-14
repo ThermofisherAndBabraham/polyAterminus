@@ -65,4 +65,9 @@ seq = "TGTGTGTGTGTGTGGAAAAAAAAA"
 seq = "AAAAAAAAAAAAAAATGTGTGTGTGTGTGGAAAAAAAAA"
 @test !detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
 
+seq = "AAAAAAAAAAAAAAA"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "AAAAAAAAA"
+@test !detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
 #GAATGTATGGTAGGAATGTATTCTCTTGTAGGAATGTAAATCTGTATTAAAAGGGGGTCCAAGCCAGGCCCCCAGGTCTTCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAA
