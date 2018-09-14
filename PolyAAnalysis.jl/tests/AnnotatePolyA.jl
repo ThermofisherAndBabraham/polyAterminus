@@ -187,6 +187,78 @@ intcol2 = Dict("chr1:1:10000" => IntervalCollection([Interval("chr1",150,150,Str
                 Biotype=String["protein_coding","protein_coding","protein_coding","NA"]
                 ) == sort!(annotate_polya_sites(intcol1, intcol2), [:Chr, :Start])
 
+intcol1 = IntervalCollection([Interval("chr1",1500,1500,Strand('+'),"Median=200.0;Min=100;Max=300;Counts=3")
+                              Interval("chr1",3000,3000,Strand('.'),"Median=600.0;Min=600;Max=600;Counts=1")
+                              Interval("chr1",10000,10000,Strand('-'),"Median=400.0;Min=300;Max=400;Counts=3")
+                              Interval("chr1",10001,10001,Strand('.'),"Median=600.0;Min=600;Max=600;Counts=1")
+                              Interval("chr1",17000,17000,Strand('.'),"Median=600.0;Min=600;Max=600;Counts=1")
+                              ])
+
+intcol2 = Dict("chr1:1:10000" => IntervalCollection([Interval("chr1",1,1000,Strand('+'),
+                                                              String("ID=exon:ENST00000643283.1:12;"*
+                                                                     "Parent=ENST00000643283.1;"*
+                                                                     "gene_id=ENSG00000126091.20;"*
+                                                                     "transcript_id=ENST00000643283.1;"*
+                                                                     "gene_type=protein_coding;"*
+                                                                     "gene_name=1;"*
+                                                                     "ftype=exon"))
+                                                     Interval("chr1",1,20000,Strand('.'),
+                                                              String("ID=exon:ENST00000643283.4:12;"*
+                                                                     "Parent=ENST00000643283.4;"*
+                                                                     "gene_id=ENSG00000126094.20;"*
+                                                                     "transcript_id=ENST00000643284.1;"*
+                                                                     "gene_type=protein_coding;"*
+                                                                     "gene_name=2;"*
+                                                                     "ftype=exon"))
+                                                     Interval("chr1",1000,10000,Strand('-'),
+                                                              String("ID=exon:ENST00000643282.1:12;"*
+                                                                     "Parent=ENST00000643282.1;"*
+                                                                     "gene_id=ENSG00000126092.20;"*
+                                                                     "transcript_id=ENST00000643282.1;"*
+                                                                     "gene_type=protein_coding;"*
+                                                                     "gene_name=3;"*
+                                                                     "ftype=intron"))
+                                                         ]),
+                "chr1:10001:20000" => IntervalCollection([Interval("chr1",1,20000,Strand('.'),
+                                                                   String("ID=exon:ENST00000643283.4:12;"*
+                                                                          "Parent=ENST00000643283.4;"*
+                                                                          "gene_id=ENSG00000126094.20;"*
+                                                                          "transcript_id=ENST00000643284.1;"*
+                                                                          "gene_type=three_prime_UTR;"*
+                                                                          "gene_name=4;"*
+                                                                          "ftype=exon"))
+                                                          Interval("chr1",150,150,Strand('+'),
+                                                                   String("ID=exon:ENST00000643283.1:12;"*
+                                                                          "Parent=ENST00000643283.1;"*
+                                                                          "gene_id=ENSG00000126091.20;"*
+                                                                          "transcript_id=ENST00000643283.1;"*
+                                                                          "gene_type=protein_coding;"*
+                                                                          "gene_name=5;"*
+                                                                          "ftype=exon"))
+                                                          Interval("chr1",160,160,Strand('-'),
+                                                                   String("ID=exon:ENST00000643282.1:12;"*
+                                                                          "Parent=ENST00000643282.1;"*
+                                                                          "gene_id=ENSG00000126092.20;"*
+                                                                          "transcript_id=ENST00000643282.1;"*
+                                                                          "gene_type=protein_coding;"*
+                                                                          "gene_name=6;"*
+                                                                          "ftype=intron"))
+                                                      ])
+                  )
+
+@test DataFrame(Chr=String["chr1","chr1","chr1","chr1","chr1"],
+              Start=Int64[1500,3000,10000,10001,17000],
+              End=Int64[1500,3000,10000,10001,17000],
+              Name=String["NA.1","2.1","3.1","4.1","4.2"],
+              Counts=Int32[3,1,3,1,1],
+              Strand=String["+",".","-",".","."],
+              Feature=String["NA","exon","intron","exon","exon"],
+              Median=Float32[200.0,600.0,400.0,600.0,600.0],
+              Min=Int16[100,600,300,600,600],
+              Max=Int16[300,600,400,600,600],
+              Biotype=String["NA","protein_coding","protein_coding","three_prime_UTR","three_prime_UTR"]
+              ) == sort!(annotate_polya_sites(intcol1, intcol2), [:Chr, :Start])
+
 # function rmdups(dframe::DataFrame)::DataFrame
 
 tdf = DataFrame(Chr=String["chr1","chr1","chr2","chr2","chr2","chr2"],
@@ -278,3 +350,40 @@ tdf3 = DataFrame(Chr=String["chr1","chr1","chr2","chr2","chr2","chr2"],
 @test ["chr4:500001:510000"] == get_split_key("chr4",500590,500590; step=10000)
 @test ["chr21:45070001:45080000"] == get_split_key("chr21",45073853,45073853)
 @test ["chr21:46680001:46690000"] == get_split_key("chr21", 46689753,46689753)
+@test ["chr1:11:20",
+       "chr1:21:30",
+       "chr1:31:40"] == get_split_key("chr1",12,35; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",12,25; step=10)
+@test ["chr1:11:20"] == get_split_key("chr1",11,20; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",11,21; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",20,30; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30",
+       "chr1:31:40"] == get_split_key("chr1",20,31; step=10)
+@test ["chr1:11:20"] == get_split_key("chr1",12,20; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",12,21; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",11,22; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",11,30; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30",
+       "chr1:31:40"] == get_split_key("chr1",11,31; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",12,30; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30",
+       "chr1:31:40"] == get_split_key("chr1",11,32; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30",
+       "chr1:31:40"] == get_split_key("chr1",12,32; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",11,29; step=10)
+@test ["chr1:11:20",
+       "chr1:21:30"] == get_split_key("chr1",12,29; step=10)
+@test ["chr1:11:20"] == get_split_key("chr1",11,19; step=10)
+@test ["chr1:11:20"] == get_split_key("chr1",12,19; step=10)

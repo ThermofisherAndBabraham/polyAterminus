@@ -125,19 +125,14 @@ check if the read is in pefixes list of naturall polyA sreches
 """
 function check_polyA_prefixes(
     fqo_trimmed::FASTQ.Record,
-    prefixes::Array{String,1},
-    maximum_distance_with_prefix_database::Int64
+    prefixes::FMIndexes.FMIndex{7,UInt32},
+    maximum_distance_with_prefix_database::Int64,
+    minimum_not_polyA::Int64
     )::Bool
+    read_substring_for_check=String(FASTQ.sequence(fqo_trimmed))[(end-minimum_not_polyA+1):end]
 
-    has_no_match = true
-
-    for pref in prefixes
-        if  evaluate(Levenshtein(), String(FASTQ.sequence(fqo_trimmed)),pref) <= maximum_distance_with_prefix_database
-            has_no_match = false
-            break
-        end
-    end
-    return(has_no_match)
+    has_no_match=(count(read_substring_for_check,prefixes)<1)
+    return  has_no_match
 end
 
 """
@@ -396,7 +391,7 @@ Arguments:
 function trim_polyA_from_fastq_pair(
     fastq1::FASTQ.Record,
     fastq2::FASTQ.Record,
-    prefixes::Array{String,1},
+    prefixes::FMIndexes.FMIndex{7,UInt32},
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
@@ -440,7 +435,7 @@ function trim_polyA_from_fastq_pair(
 
             #check if the read is in pefixes list of natural polyA streches
             if has_proper_polyA
-                has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database)
+                has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database,minimum_not_polyA)
                 if !has_proper_polyA
                     fqo_trimmed=cosensus_extended_fwd_read
                 end
