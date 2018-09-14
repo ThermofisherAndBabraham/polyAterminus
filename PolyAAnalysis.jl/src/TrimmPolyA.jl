@@ -125,7 +125,7 @@ end
 
 
 """
-check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
+    check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
 
     Check if the read is in pefixes list of naturall polyA sreches.
 
@@ -227,7 +227,7 @@ end
 
 
 """
-function that trimmes 3 polyA tail of a given fastq entry and outputs trimmed read with number of polyA indicated in read's name
+    Function that trimmes 3 polyA tail of a given fastq entry and outputs trimmed read with number of polyA indicated in read's name
 
     # Arguments
     - `minimum_not_polyA::Int64`: minimum length of not polyA strech in a read
