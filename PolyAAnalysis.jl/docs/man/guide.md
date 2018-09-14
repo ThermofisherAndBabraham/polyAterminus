@@ -16,7 +16,7 @@
 ```
 
 3. Add channels to conda:
-```bashr
+```bash
     conda config --add channels conda-forge
     conda config --add channels bioconda
     conda config --add channels anaconda
@@ -84,3 +84,6 @@ PolyAAnalysis is designed to find and annotate polyA sites.
           -g {reference.gff3}
 ```
 All detected polyA sites with min, max, med are returned in tsv format and annotated bed file.
+GFF3 features used for annotation: ["gene","transcript","mRNA","exon","intron","CDS","UTR",
+"three_prime_UTR","five_prime_UTR","polyA_sequence","polyA_site","start_codon","stop_codon",
+"Selenocysteine"]. Not listed features will be omited. 
