@@ -294,10 +294,14 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
     dfn = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
                     Counts=Int32[], Strand=String[], Feature=String[],
                     Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
+    # Dataframe for not annotated sites.
+    dfna = DataFrame(Chr=String[], Start=Int64[], End=Int64[], Name=String[],
+                    Counts=Int32[], Strand=String[], Feature=String[],
+                    Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
     for i1 in a
         ct = Int64(0)
-        # parse metadata from polyA site
+        # Parse metadata from polyA site.
         splt1::Array{SubString{String},1} = split(metadata(i1),";")
         c = parse(Int32,split(splt1[4],"=")[2])
         str = string(strand(i1))
@@ -308,7 +312,7 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
         it1 = first(i1)
         it2 = last(i1)
 
-        # assuming that start and end is the same of the polyA site.
+        # Assuming that start and end is the same of the polyA site.
         split_k = get_split_key(chr, it1, it2)[1]
 
         try
@@ -337,24 +341,23 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
             gn = "NA"
             bt = "NA"
 
-            if strand(i1) == Strand('-')
-                push!(dfn, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
-            else
-                push!(dfp, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
-            end
+            push!(dfna, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
         end
     end
 
     sort!(dfn, [:Chr, :Start, :End, :Name], rev=true)
     sort!(dfp, [:Chr, :Start, :End, :Name])
+    sort!(dfna, [:Chr, :Start, :End, :Name])
 
+    # remove duplicated gene features
     dfp = rmdups(dfp)
     dfn = rmdups(dfn)
 
     enumeratenames!(dfn)
     enumeratenames!(dfp)
+    enumeratenames!(dfna)
 
-    df = vcat(dfp, dfn)
+    df = vcat(dfp, dfn, dfna)
 
     return df
 end
@@ -428,6 +431,9 @@ end
     DataFrame should be sorted by Chr, Start, End and gene name.
     Featues are rated by their annotation hierarchy.
     Keeps most accurate feature (gene has exons and introns, etc.).
+
+    # Arguments
+    - `dframe::DataFrame`: a sorted dataframe.
 """
 function rmdups(dframe::DataFrame)::DataFrame
 
@@ -435,10 +441,10 @@ function rmdups(dframe::DataFrame)::DataFrame
                    Counts=Int32[], Strand=String[], Feature=String[],
                    Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
-    d = Dict("gene"=>13, "transcript"=>12,"exon"=>11, "intron"=>10, "CDS"=>9,
+    d = Dict("gene"=>13, "transcript"=>12, "mRNA"=>12, "exon"=>11, "intron"=>10, "CDS"=>9,
              "UTR"=>8, "three_prime_UTR"=>7, "five_prime_UTR"=>6,
              "polyA_sequence"=>5, "polyA_site"=>4, "start_codon"=>3,
-             "stop_codon"=>2, "Selenocysteine"=>1, "NA"=>0)
+             "stop_codon"=>2, "Selenocysteine"=>1)
 
     ct = Int64(0)
     ct2 = Int64(0)
@@ -454,8 +460,12 @@ function rmdups(dframe::DataFrame)::DataFrame
         if ct > 0
             if df[end,:][1] == [y[1]] && df[end,:][2] == [y[2]] && df[end,:][3] == [y[3]] && df[end,:][4] == [y[4]] && df[end,:][5] == [y[5]] && df[end,:][6] == [y[6]]
 
-                if d[dframe[7][ct2]] < d[df[end,:][7][1]]
-                    df[7][ct] = dframe[7][ct2]
+                try
+                    if d[dframe[7][ct2]] < d[df[end,:][7][1]]
+                        df[7][ct] = dframe[7][ct2]
+                    end
+                catch
+                    KeyError(dframe[7][ct2])
                 end
 
             else

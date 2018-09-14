@@ -249,7 +249,7 @@ intcol2 = Dict("chr1:1:10000" => IntervalCollection([Interval("chr1",1,1000,Stra
 @test DataFrame(Chr=String["chr1","chr1","chr1","chr1","chr1"],
               Start=Int64[1500,3000,10000,10001,17000],
               End=Int64[1500,3000,10000,10001,17000],
-              Name=String["NA.1","2.2","3.1","4.1","4.2"],
+              Name=String["NA.1","2.1","3.1","4.1","4.2"],
               Counts=Int32[3,1,3,1,1],
               Strand=String["+",".","-",".","."],
               Feature=String["NA","exon","intron","exon","exon"],
