@@ -13,6 +13,8 @@ using PolyAAnalysis
 @testset "PolyAtrimming" begin
 include("trim_polyA_3end.jl")
 include("trim_polyA_from_fastq_record.jl")
+include("detect_polyA_in_a_string.jl")
+include("get_polyA_prefixes.jl")
 end
 
 @testset "AnnotatePolyA" begin

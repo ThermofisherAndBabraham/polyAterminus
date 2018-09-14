@@ -1,43 +1,68 @@
-using BioSequences
-using Base.Test
-push!(LOAD_PATH, "../../")
-using PolyAAnalysis
+##
+##  function detect_polyA_in_a_string(
+##    fq_seq::String,
+##    minimum_polyA_length::Int64,
+##    maximum_non_A_symbols::Int64;
+##    maximum_search_fragment_length::Int64=50,
+##    debug=false
+##    )::Bool
+##
 
-# """
-# checks if a string of a read contains polyA strechA strating from the 3' end
-#     fq_seq - string for testing
-#     minimum_polyA_length - minimum length of polyA strech
-#     maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
-# """
+seq = "AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT"
+@test !detect_polyA_in_a_string(seq,10,1,debug=true)
 
-#test set 1
-for (seq,detected) in [("AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT",false)]
-    @test detect_polyA_in_a_string(seq,10,1,debug=true)  == detected
-end
+seq = "GAATGTATGGTAGGAATGTATTCTCTTGTAGGAATGTAAATCTGTATTAAAAGGGGGTCCAAGCCAGGCCCCCAGGTCTTCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAA"
+@test detect_polyA_in_a_string(seq,10,1,debug=true)
 
-for (seq,detected) in [("GAATGTATGGTAGGAATGTATTCTCTTGTAGGAATGTAAATCTGTATTAAAAGGGGGTCCAAGCCAGGCCCCCAGGTCTTCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAA",true)]
-    @test detect_polyA_in_a_string(seq,10,1,debug=true)  == detected
-end
+seq = "AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT"
+@test detect_polyA_in_a_string(seq,10,3,debug=true)
 
-for (seq,detected) in [("AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT",true)]
-    @test detect_polyA_in_a_string(seq,10,3,debug=true)  == detected
-end
+seq = "AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT"
+@test !detect_polyA_in_a_string(seq,10,1,debug=true)
 
-for (seq,detected) in [("AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT",false)]
-    @test detect_polyA_in_a_string(seq,10,1,debug=true)  == detected
-end
+seq = "TCAAAAAAATAATATGGTAATAATAATAAAAGCAGTGCCCAGAGAACAAGGCTTGTTGGCTGTTCCACCCCAGGGGGCCCCTTGCACAGGCGGTGCCATCTCTGCCTCCCAAAGCTCTAAGAGCCACTGTCCCCCATCCCAAGAGA"
+@test !detect_polyA_in_a_string(seq,10,1,debug=true)
 
-for (seq,detected) in [("TCAAAAAAATAATATGGTAATAATAATAAAAGCAGTGCCCAGAGAACAAGGCTTGTTGGCTGTTCCACCCCAGGGGGCCCCTTGCACAGGCGGTGCCATCTCTGCCTCCCAAAGCTCTAAGAGCCACTGTCCCCCATCCCAAGAGA",true)]
-    @test detect_polyA_in_a_string(seq,10,1,debug=true)  == detected
-end
+seq = "TCAAAAAAATAATATGGTAATAATAATAAAAGCAGTGCCCAGAGAACAAGGCTTGTTGGCTGTTCCACCCCAGGGGGCCCCTTGCACAGGCGGTGCCATCTCTGCCTCCCAAAGCTCTAAGAGCCACTGTCCCCCATCCCAAGAGA"
+@test !detect_polyA_in_a_string(seq,10,1,debug=true)
 
-for (seq,detected) in [("TCAAAAAAATAATATGGTAATAATAATAAAAGCAGTGCCCAGAGAACAAGGCTTGTTGGCTGTTCCACCCCAGGGGGCCCCTTGCACAGGCGGTGCCATCTCTGCCTCCCAAAGCTCTAAGAGCCACTGTCCCCCATCCCAAGAGA",true)]
-    @test detect_polyA_in_a_string(seq,10,1,debug=true)  == detected
-end
+seq = "GGGGCGCGGCGGCGCGGGGGGGGAAAAAAAAACCCCCCCCCCCCCCCGGGGGGCCCC"
+@test !detect_polyA_in_a_string(seq,10,1,debug=true)
 
+seq = "GGGGCGCGGCGGCGCGGGGGGGGAAAATAAAAACCCCCCCCCCCCCCCGGGGGGCCCC"
+@test detect_polyA_in_a_string(seq,10,1,debug=true)
 
-for (seq,detected) in [("GGGGCGCGGCGGCGCGGGGGGGGAAAAAAAAACCCCCCCCCCCCCCCGGGGGGCCCC",false),("GGGGCGCGGCGGCGCGGGGGGGGAAAATAAAAACCCCCCCCCCCCCCCGGGGGGCCCC",true)]
-    @test detect_polyA_in_a_string(seq,10,1,debug=true)  == detected
-end
+seq = "TGTGTGTGTGTGTGGTAAAAAAAAAAGT"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGTAAAAAAAAAA"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGTAAAAAAAAATAGGGG"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGATAAAAAAAAA"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGAATAAAAAAAAA"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGAAAAAAAAATAA"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGAATAAAAAAAAATAA"
+@test detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGAAAAAAAAAT"
+@test !detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGTAAAAAAAAA"
+@test !detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "TGTGTGTGTGTGTGGAAAAAAAAA"
+@test !detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
+
+seq = "AAAAAAAAAAAAAAATGTGTGTGTGTGTGGAAAAAAAAA"
+@test !detect_polyA_in_a_string(seq,10,1,maximum_search_fragment_length=20)
 
 #GAATGTATGGTAGGAATGTATTCTCTTGTAGGAATGTAAATCTGTATTAAAAGGGGGTCCAAGCCAGGCCCCCAGGTCTTCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAA
