@@ -90,7 +90,7 @@ function check_polyA_prefixes(
     return  has_no_match
 end
 
-"""t
+"""
 function that trimmes 3' end of polyA having sequence from non A symbols that might originate fue to reamins of adapters or sequencing artefacts
 Arguments:
     seq - read sequence in String
