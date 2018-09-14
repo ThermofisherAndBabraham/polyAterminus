@@ -123,6 +123,7 @@ function extend_poly_A(
     return(fq_seq1)
 end
 
+
 """
 check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
 
@@ -146,6 +147,7 @@ function check_polyA_prefixes(
     has_no_match=(count(read_substring_for_check,prefixes)<1)
     return  has_no_match
 end
+
 
 """
     trim_polyA_3end(seq::String, minimum_poly_A_between::Int64)
@@ -185,6 +187,7 @@ function trim_polyA_3end(seq::String,
     return(out)
 end
 
+
 """
     count_nona(seq::String)
 
@@ -200,6 +203,7 @@ function count_nona(seq::String)::Int64
     end
     return(ct)
 end
+
 
 """
     first_nona(seq::String)
@@ -403,6 +407,7 @@ function get_polyA_prefixes(fasta_record::FASTA.Record,
     return(output)
 end
 
+
 """
     trim_polyA_from_fastq_pair(fastq1::FASTQ.Record,fastq2::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64,maximum_distance_with_prefix_database::Int64,minimum_poly_A_between::Int64)
 
@@ -419,7 +424,6 @@ end
     - `minimum_poly_A_between::Int64`: minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
 
 """
-
 function trim_polyA_from_fastq_pair(
     fastq1::FASTQ.Record,
     fastq2::FASTQ.Record,
