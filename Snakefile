@@ -391,7 +391,7 @@ if (transcripts != None):
         shell:
             "julia --depwarn=no PolyAAnalysis.jl/scripts/mark_poly_A.jl -i -p {threads} " +
             "-a {input[0]} -b {input[1]} -o {params.output_stem} " +
-            "-c -r {params.gz} 2>&1 | tee -a {log}"
+            " -r {params.gz} 2>&1 | tee -a {log}"
 
 elif (gff != None and reference != None):
     rule trim_polyA_reads:

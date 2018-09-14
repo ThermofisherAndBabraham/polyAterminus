@@ -64,3 +64,10 @@ if ! $JULIA -e 'using StringDistances' > /dev/null 2>&1; then
     $JULIA -e 'using StringDistances'
 else echo 'Julia pkg StringDistances is installed ... Nothing to be done.'
 fi
+
+if ! $JULIA -e 'using FMIndexes' > /dev/null 2>&1; then
+    echo 'Julia pkg FMIndexes is beeing installed ...'
+    $JULIA -e 'Pkg.add("FMIndexes", v"0.1.0")'
+    $JULIA -e 'using FMIndexes'
+else echo 'Julia pkg FMIndexes is installed ... Nothing to be done.'
+fi

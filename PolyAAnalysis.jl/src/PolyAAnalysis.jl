@@ -51,6 +51,8 @@ import GenomicFeatures: IntervalCollection
 import GenomicFeatures: Strand
 import StringDistances: Levenshtein, evaluate
 import TranscodingStreams
+import FMIndexes: FMIndexes
+
 
 include("AnnotatePolyA.jl")
 include("ParseGFF.jl")
