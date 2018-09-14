@@ -349,6 +349,7 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
     sort!(dfp, [:Chr, :Start, :End, :Name])
     sort!(dfna, [:Chr, :Start, :End, :Name])
 
+    # remove duplicated gene features
     dfp = rmdups(dfp)
     dfn = rmdups(dfn)
 
@@ -430,6 +431,9 @@ end
     DataFrame should be sorted by Chr, Start, End and gene name.
     Featues are rated by their annotation hierarchy.
     Keeps most accurate feature (gene has exons and introns, etc.).
+
+    # Arguments
+    - `dframe::DataFrame`: a sorted dataframe.
 """
 function rmdups(dframe::DataFrame)::DataFrame
 
@@ -437,10 +441,10 @@ function rmdups(dframe::DataFrame)::DataFrame
                    Counts=Int32[], Strand=String[], Feature=String[],
                    Median=Float32[], Min=Int16[], Max=Int16[], Biotype=String[])
 
-    d = Dict("gene"=>13, "transcript"=>12,"exon"=>11, "intron"=>10, "CDS"=>9,
+    d = Dict("gene"=>13, "transcript"=>12, "mRNA"=>12, "exon"=>11, "intron"=>10, "CDS"=>9,
              "UTR"=>8, "three_prime_UTR"=>7, "five_prime_UTR"=>6,
              "polyA_sequence"=>5, "polyA_site"=>4, "start_codon"=>3,
-             "stop_codon"=>2, "Selenocysteine"=>1, "NA"=>0)
+             "stop_codon"=>2, "Selenocysteine"=>1)
 
     ct = Int64(0)
     ct2 = Int64(0)
@@ -456,8 +460,12 @@ function rmdups(dframe::DataFrame)::DataFrame
         if ct > 0
             if df[end,:][1] == [y[1]] && df[end,:][2] == [y[2]] && df[end,:][3] == [y[3]] && df[end,:][4] == [y[4]] && df[end,:][5] == [y[5]] && df[end,:][6] == [y[6]]
 
-                if d[dframe[7][ct2]] < d[df[end,:][7][1]]
-                    df[7][ct] = dframe[7][ct2]
+                try
+                    if d[dframe[7][ct2]] < d[df[end,:][7][1]]
+                        df[7][ct] = dframe[7][ct2]
+                    end
+                catch
+                    KeyError(dframe[7][ct2])
                 end
 
             else
