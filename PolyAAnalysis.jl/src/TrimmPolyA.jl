@@ -10,7 +10,7 @@ function detect_polyA_in_a_string(
     )::Bool
 
 Checks if a string of a read contains polyA strechA starting seach from the 3'
-Once a g search once a strech is found. A first and last symbol of a strech must be A.
+A first and last symbol of a strech must be A.
     fq_seq - string for testing
     minimum_polyA_length - minimum length of polyA strech
     maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
@@ -19,21 +19,24 @@ function detect_polyA_in_a_string(
     fq_seq::String,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64;
+    maximum_search_fragment_length::Int64=50,
     debug=false
     )::Bool
 
     has_poly_a = false
     fq_length = length(fq_seq)
-    window_position_from_3_end = 0
+    window_position_from_3_end = minimum_polyA_length
+    startini = minimum_polyA_length
 
-    for startini in minimum_polyA_length:fq_length
+
+    while (window_position_from_3_end < maximum_search_fragment_length) && (startini  != fq_length)
         window_position_from_3_end += 1
         start = fq_length - startini + 1
+        # skip searching for polyA far from the  right end
         substring = String(fq_seq[start:start+minimum_polyA_length-1])
 
         if substring[1]=='A' && substring[minimum_polyA_length]=='A' #first and last symbol of a polyA strech must be A
             ct = 0
-
             for symb in substring
                 if symb != 'A'
                     ct += 1
@@ -50,7 +53,9 @@ function detect_polyA_in_a_string(
                 break
             end
         end
+        startini+=1
     end
+
     return(has_poly_a)
 end
 
@@ -75,22 +80,17 @@ check if the read is in pefixes list of naturall polyA sreches
 """
 function check_polyA_prefixes(
     fqo_trimmed::FASTQ.Record,
-    prefixes::Array{String,1},
-    maximum_distance_with_prefix_database::Int64
+    prefixes::FMIndexes.FMIndex{7,UInt32},
+    maximum_distance_with_prefix_database::Int64,
+    minimum_not_polyA::Int64
     )::Bool
+    read_substring_for_check=String(FASTQ.sequence(fqo_trimmed))[(end-minimum_not_polyA+1):end]
 
-    has_no_match = true
-
-    for pref in prefixes
-        if  evaluate(Levenshtein(), String(FASTQ.sequence(fqo_trimmed)),pref) <= maximum_distance_with_prefix_database
-            has_no_match = false
-            break
-        end
-    end
-    return(has_no_match)
+    has_no_match=(count(read_substring_for_check,prefixes)<1)
+    return  has_no_match
 end
 
-"""
+"""t
 function that trimmes 3' end of polyA having sequence from non A symbols that might originate fue to reamins of adapters or sequencing artefacts
 Arguments:
     seq - read sequence in String
@@ -346,7 +346,7 @@ Arguments:
 function trim_polyA_from_fastq_pair(
     fastq1::FASTQ.Record,
     fastq2::FASTQ.Record,
-    prefixes::Array{String,1},
+    prefixes::FMIndexes.FMIndex{7,UInt32},
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
@@ -390,7 +390,7 @@ function trim_polyA_from_fastq_pair(
 
             #check if the read is in pefixes list of natural polyA streches
             if has_proper_polyA
-                has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database)
+                has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database,minimum_not_polyA)
                 if !has_proper_polyA
                     fqo_trimmed=cosensus_extended_fwd_read
                 end
