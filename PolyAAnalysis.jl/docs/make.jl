@@ -6,5 +6,8 @@ makedocs(
     clean = false,
     sitename = "PolyAAnalysis.jl",
     authors = "GA, KM, GM, and contributors.",
-    pages = ["Methods" => "index.md"]
+    pages = ["Methods" => "index.md",
+             "Manual" => "man/guide.md"
+                        
+             ]
 )
