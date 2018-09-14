@@ -47,6 +47,7 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     if !isfile(jldFile) | !use_cached_results
         # Open files and prepare decompression stream
         if file != nothing
+            println(STDERR,"Reading transcripts")
             file_stream = open(file,"r")
         	if file[length(file)-2:end] == ".gz"
             	file_stream = GzipDecompressorStream(file_stream)
@@ -58,6 +59,7 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
             collectedFasta = get_transcripts_from_gff(genomeFa, gff )
 
         elseif genomeFa != nothing
+            println(STDERR,"Generating transcripts from genome")
             file_stream = open(genomeFa,"r")
             collectedFasta = collect(FASTA.Reader(file_stream))
             close(file_stream)
@@ -96,7 +98,6 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
         number_of_unque_prefixes = length(all_result)
         println(STDERR, "Loaded ....")
     end
-        println(typeof(index))
     return(index)
 end
 
