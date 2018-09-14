@@ -10,6 +10,7 @@ using JLD, HDF5
 using FileIO
 using BioSequences
 using BufferedStreams
+using FMIndexes
 
 
 push!(LOAD_PATH, ".")
@@ -31,7 +32,8 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     minimum_not_polyA::Int64=20,
     minimum_polyA_length::Int64=20,
     number_of_workers::Int64=4,
-    use_cached_results::Bool=true)
+    use_cached_results::Bool=true)::FMIndexes.FMIndex{7,UInt32}
+
 
     # file for caching
     if file != nothing
@@ -77,22 +79,25 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
         all_result = unique(result)
         number_of_unque_prefixes = length(all_result)
         println(STDERR, "Colected $number_of_unque_prefixes unique polyA prefixes in known transcripts in $time s")
+        #prepare a concatenated string of the prefixes separated by : symbol
+        concatenated_prefixes = join(all_result,':')
+        println(length(concatenated_prefixes))
+        index = FMIndex(concatenated_prefixes)
 
         if use_cached_results
-            save(File(format"JLD",jldFile), "all_result", all_result,compress=true)
-            println(STDERR, "Colected unique polyA prefixes in known transcripts are saved in file $jldFile")
+            save(File(format"JLD",jldFile), "index", index,compress=true)
+            println(STDERR, "FMI index of colected unique polyA prefixes in known transcripts are saved in file $jldFile")
         end
 
     else
-        println(STDERR ,"Loading colected unique polyA prefixes in known transcriptsfrom  file $jldFile")
+        println(STDERR ,"Loading FMI index of colected unique polyA prefixes in known transcriptsfrom  file $jldFile")
         data = load(jldFile)
-        all_result = data["all_result"]
+        index = data["index"]
         number_of_unque_prefixes = length(all_result)
-        println(STDERR, "Loaded $number_of_unque_prefixes unique polyA prefixes in known transcripts")
+        println(STDERR, "Loaded ....")
     end
-
-    return(all_result)
-    println(STDERR,"colected prefixes are sto")
+        println(typeof(index))
+    return(index)
 end
 
 """
@@ -154,7 +159,7 @@ Arguments:
 function trim_polyA_from_files(
     fastq1::String,
     fastq2::String,
-    prefixes::Array{String,1},
+    prefixes::FMIndexes.FMIndex{7,UInt32},
     number_of_workers::Int64,
     output_prefix::String,
     minimum_not_polyA::Int64,
@@ -199,7 +204,7 @@ function trim_polyA_from_files(
             ct_pair_with_discarded_polyA::SharedArray{Int64,1},
             ct_finished::SharedArray{Int64,1},
             ct_output_chunks::SharedArray{Int64,1},
-            prefixes::Array{String,1},
+            prefixes::FMIndexes.FMIndex{7,UInt32},
             minimum_not_polyA::Int64,
             minimum_polyA_length::Int64,
             maximum_non_A_symbols::Int64,
@@ -390,17 +395,38 @@ function trim_polyA_from_files(
     @schedule write_from_pipe(fastqo_1_2_s_d, ct_output_chunks, ct_finished, output_prefix)
 
     number_of_workers = length(ct_finished)
+    sleep_time = 5
+    sleep_ct = 0
+    finished = 0
+    finished_first = 0
+    end_time = now()
+    start_time = now()
+
     while  sum(ct_finished) < number_of_workers #!((ctout == sum(ct_all)) & jub_submision_finished) || ((ctout==0) && (sum(ct_all)==0))# print out results
-            sleep(1)
-            print(STDERR, "Parsed reads: ",sum(ct_all),
-            " without polyA: ",sum(ct_pair_without_polyA),
-            " with proper polyA: ",sum(ct_pair_with_proper_polyA),
+            sleep(sleep_time)
+            old_finished = finished
+            finished = sum(ct_all)
+            end_time = now()
+            sleep_ct+=1
+            if sleep_ct == 1
+                start_time = end_time
+                finished_first=finished
+            end
+            speed = round(((finished-old_finished)/sleep_time),2)
+            print(STDERR, "Parsed reads: ",finished," ; ","at speed $speed read pairs/s ; ",
+            " without polyA: ",sum(ct_pair_without_polyA)," ; ",
+            " with proper polyA: ",sum(ct_pair_with_proper_polyA)," ; ",
             " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
     end
-    print(STDERR, "Parsed reads: ",sum(ct_all),
-    " without polyA: ",sum(ct_pair_without_polyA),
-    " with proper polyA: ",sum(ct_pair_with_proper_polyA),
+
+    elapsed_time=convert(Int64,Dates.value(end_time-start_time))
+    speed = round(((finished-finished_first)/elapsed_time*1000),2)
+    print(STDERR, "Parsed reads: ",finished," ; ","at average speed $speed read pairs/s ; ",
+    " without polyA: ",sum(ct_pair_without_polyA)," ; ",
+    " with proper polyA: ",sum(ct_pair_with_proper_polyA)," ; ",
     " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\n")
+
+
 end
 
 
@@ -468,6 +494,7 @@ function main(args)
     eval(macroexpand(quote @everywhere using BioSequences end))
     eval(macroexpand(quote @everywhere using CodecZlib end))
     eval(macroexpand(quote @everywhere using BufferedStreams end))
+    eval(macroexpand(quote @everywhere using FMIndexes end))
     eval(macroexpand(quote @everywhere push!(LOAD_PATH, ".") end))
     eval(macroexpand(quote @everywhere using PolyAAnalysis end))
 
