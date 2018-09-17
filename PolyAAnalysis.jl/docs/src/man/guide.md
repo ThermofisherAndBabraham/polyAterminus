@@ -43,6 +43,7 @@
 PolyAAnalysis is designed to find and annotate polyA sites.
 
 ### Trimming and tagging reads with polyA sequence.
+
 1. If transcripts fasta are available trim and tag polyA reads in your fastq files by running:
    ```bash
       julia --depwarn=no PolyAAnalysis.jl/scripts/mark_poly_A.jl
@@ -54,7 +55,6 @@ PolyAAnalysis is designed to find and annotate polyA sites.
 
 2. Transcripts are not available, you can generate them from gff annotation
     and reference fasta and trim-tag polyA reads in your fastq files by running:
-
    ```bash
       julia --depwarn=no PolyAAnalysis.jl/scripts/mark_poly_A.jl
             -i -p {threads}
@@ -67,7 +67,6 @@ PolyAAnalysis is designed to find and annotate polyA sites.
 3. If you have only fasta reference read tagging and trimming will be performed
     accordingly to reference sequences. Rich polyA sequences will not be trimmed
     from a read if relatively same sequence is in the genome.
-
    ```bash
       julia --depwarn=no PolyAAnalysis.jl/scripts/mark_poly_A.jl
             -i -p {threads}
@@ -79,12 +78,12 @@ PolyAAnalysis is designed to find and annotate polyA sites.
 After trimming reads should be aligned to the reference using `STAR` for example.
 
 ### Annotating polyA sites.
-1. To annotate detected polyA sites run:
 
-    ```bash
-      julia --depwarn=no PolyAAnalysis.jl/scripts/annotate_polyA.jl
-            -b {input}
-            -o {output_prefix}
-            -g {reference.gff3}
-            -s {strandness}
-    ```
+1. To annotate detected polyA sites run:
+   ```bash
+     julia --depwarn=no PolyAAnalysis.jl/scripts/annotate_polyA.jl
+           -b {input}
+           -o {output_prefix}
+           -g {reference.gff3}
+           -s {strandness}
+   ```
