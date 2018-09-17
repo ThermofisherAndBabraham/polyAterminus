@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 
 
-function readbam(bam::String)
+function readbam(bam::String, strandness::String)
 
     reader = open(BAM.Reader, bam)
     record = BAM.Record()
@@ -10,6 +10,11 @@ function readbam(bam::String)
     pareads = Int64(0)
     pclus = Dict{String,Array{Int16,1}}()
 
+    if !(strandness in ["+" "-"])
+        println("ERROR: provided srandness is not correct: $strandness, [+/-].")
+        exit(1)
+    end
+
     while !eof(reader)
         read!(reader, record)
         if BAM.ismapped(record)
@@ -17,8 +22,25 @@ function readbam(bam::String)
             flag = BAM.flag(record)
             treads += 1
 
-            # skip not primary aligned, supplementary alignment
-            if (flag&256 == 0) && (flag&2048 == 0)
+            iftrue::Bool = false
+
+            # if pair end
+            if flag&1 == 1
+                # if strandness +, take first read
+                if strandness == "+" && (flag&64==64)
+                    iftrue = true
+                # if strandness -, take second read
+                elseif strandness == "-" && (flag&128==128)
+                    iftrue = true
+                else
+                    iftrue = false
+                end
+            else
+                iftrue = true
+            end
+
+            # skip not primary aligned, supplementary alignment.
+            if (flag&256 == 0) && (flag&2048 == 0) && iftrue
                 spl = split(BAM.tempname(record),":")
 
                 if flag&16 == 0
