@@ -17,15 +17,15 @@
 function detect_polyA_in_a_string(
     fq_seq::String,
     minimum_polyA_length::Int64,
-    maximum_non_A_symbols::Int64;
+    maximum_non_A_symbols::Int64,
+    re::Regex;
     maximum_search_fragment_length::Int64=50,
     debug=false
     )::Bool
 
     if maximum_non_A_symbols == 1
-        return detect_polyA_in_a_string(fq_seq,minimum_polyA_length,maximum_search_fragment_length,debug)
+        return detect_polyA_in_a_string(fq_seq,minimum_polyA_length,maximum_search_fragment_length,re,debug)
     end
-
     has_poly_a = false
     fq_length = length(fq_seq)
     window_position_from_3_end = minimum_polyA_length
@@ -57,8 +57,7 @@ function detect_polyA_in_a_string(
         end
         startini+=1
     end
-
-    return(has_poly_a)
+    return has_poly_a
 end
 
 
@@ -66,6 +65,7 @@ function detect_polyA_in_a_string(
     fq_seq::String,
     minimum_polyA_length::Int64,
     maximum_search_fragment_length::Int64,
+    re::Regex,
     debug::Bool
     )::Bool
 
@@ -82,13 +82,9 @@ function detect_polyA_in_a_string(
             maximum_search_fragment_length = fq_length - 1
         end
     end
+    fq_seq = reverse(fq_seq[end-maximum_search_fragment_length:end])
 
-    fq_seq = fq_seq[end-maximum_search_fragment_length:end]
-    min_l = Int64(minimum_polyA_length / 2)
-    re = Regex("(A+[GTC])?(A{$min_l,})([GTC]A+)?")
-
-    for m in eachmatch(re,fq_seq)
-
+    for m in eachmatch(re,fq_seq, true)
         if m[1] == nothing
             len1 = 0
         else
@@ -126,7 +122,7 @@ function extend_poly_A(
     fq_seq1::FASTQ.Record,
     fq_seq2::FASTQ.Record)::FASTQ.Record
 
-    return(fq_seq1)
+    return fq_seq1
 end
 
 
@@ -190,7 +186,7 @@ function trim_polyA_3end(seq::String,
     else
         out = (seq[1:trimming_position-1],length_sequence-trimming_position+1)
     end
-    return(out)
+    return out
 end
 
 
@@ -202,12 +198,13 @@ end
 function count_nona(seq::String)::Int64
 
     ct = 0
+
     for s in seq
         if s != 'A'
             ct += 1
         end
     end
-    return(ct)
+    return ct
 end
 
 
@@ -228,7 +225,7 @@ function first_nona(seq::String)::Int64
         end
         ct += 1
     end
-    return(ct)
+    return ct
 end
 
 
@@ -355,9 +352,9 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
     end
 
     if has_proper_polyA
-        return(fqo,has_proper_polyA,polyA_detected)
+        return fqo,has_proper_polyA,polyA_detected
     else
-        return(fq,has_proper_polyA,polyA_detected)
+        return fq,has_proper_polyA,polyA_detected
     end
 
 end
@@ -375,16 +372,15 @@ end
 """
 function get_polyA_prefixes(fasta_record::FASTA.Record,
     minimum_not_polyA::Int64,
-    minimum_polyA_length::Int64)::Array{String,1}
+    minimum_polyA_length::Int64,
+    re::Regex)::Array{String,1}
 
     output = Array{String,1}()
-    re = Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length,}")
 
     for m in eachmatch(re, String(sequence(fasta_record)))
-        prefix_part = m.match[1:minimum_not_polyA]
-        push!(output,prefix_part)
+        push!(output,m[1])
     end
-    return(output)
+    return output
 end
 
 
@@ -402,15 +398,17 @@ end
 function get_polyA_prefixes(fasta_record::FASTA.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
+    re::Regex,
     counter::SharedArray)::Array{String,1}
 
-    output = get_polyA_prefixes(fasta_record,minimum_not_polyA,minimum_polyA_length)
+    output = get_polyA_prefixes(fasta_record,minimum_not_polyA,minimum_polyA_length,re)
     counter[(myid()-1)] += 1
     total_jobs = sum(counter)
+
     if mod(total_jobs,10000) == 0
       print(STDERR,"Number of parsed transcripts = $total_jobs\r")
     end
-    return(output)
+    return output
 end
 
 
@@ -438,7 +436,8 @@ function trim_polyA_from_fastq_pair(
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
     maximum_distance_with_prefix_database::Int64,
-    minimum_poly_A_between::Int64;
+    minimum_poly_A_between::Int64,
+    re::Regex;
     debug_id="None",
     debug=false
     )
@@ -451,15 +450,15 @@ function trim_polyA_from_fastq_pair(
     if debug
         println("for_read:", "\n", fastq1, "\n")
         println("rev_read:", "\n", fastq2, "\n")
-        println("seq_for_read", seq_for_read, "\n")
-        println("revseq_rev_read", revseq_rev_read, "\n")
-        println("Is polyA in seq_for_read: ", detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols))
-        println("Is polyA in revseq_rev_read: ", detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols))
+        println("seq_for_read", seq_for_read,"\n")
+        println("revseq_rev_read", revseq_rev_read,"\n")
+        println("Is polyA in seq_for_read: ", detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols,re))
+        println("Is polyA in revseq_rev_read: ", detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols,re))
         println("used parameter: minimum_polyA_length $minimum_polyA_length, maximum_non_A_symbols $maximum_non_A_symbols")
     end
 
-    if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols) &&
-        detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols)
+    if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols,re) &&
+        detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols,re)
             #tries sto esxtend polyA
             cosensus_extended_fwd_read=extend_poly_A(fastq1,fastq2)
             fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_record(cosensus_extended_fwd_read,
@@ -485,7 +484,7 @@ function trim_polyA_from_fastq_pair(
     else
         fqo_trimmed = fastq1
     end
-    return(fqo_trimmed, has_proper_polyA, polyA_detected)
+    return fqo_trimmed, has_proper_polyA, polyA_detected
 end
 
 
