@@ -28,6 +28,13 @@ function main(args)
             help = "GFF3 file"
             required = true
             dest_name = "gff3file"
+        "--strandness", "-s"
+            arg_type = String
+            help = "Strandness.
+                    If R1 read is the same as a gene sequence: +;
+                    If R2 read is the same as a gene sequence: -"
+            dest_name = "strandness"
+            default = "+"
     end
 
     parsed_args = parse_args(arg_parse_settings)
@@ -38,7 +45,7 @@ function main(args)
 
     bam = parsed_args["bam"]
     tic()
-    treads, passreads, pareads, pclus = readbam(bam)
+    treads, passreads, pareads, pclus = readbam(bam, parsed_args["strandness"])
     println("Parsed bam $bam: ")
     toc()
     tic()
