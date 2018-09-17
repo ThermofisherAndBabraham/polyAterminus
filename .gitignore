@@ -35,13 +35,6 @@ output*/*
 tmp*/*
 benchmarks/*
 
-# adapterremoval outputs #
-##########################
-*.settings
-*.discarded
-*.singleton
-*.collapsed
-*.collapsed.truncated
 
 # jupyter notebook files #
 ##########################
@@ -49,18 +42,6 @@ benchmarks/*
 **/*ipynb_checkpoints/
 *.ipynb
 
-#testing RNA anotation files
-############################
-tests/references/rna_workflow/chr1_region_ercc_STAR_annotation/*
-tests/references/rna_workflow/chr1_region_ercc.fa
-tests/references/rna_workflow/chr1_region_ercc.fa_genomeLength.csv
-tests/references/rna_workflow/chr1_region.fa.fai
-tests/references/rna_workflow/chr1_region_transcripts_ercc.fa
-tests/references/rna_workflow/chr1_region_transcripts_ercc.fa.amb
-tests/references/rna_workflow/chr1_region_transcripts_ercc.fa.ann
-tests/references/rna_workflow/chr1_region_transcripts_ercc.fa.bwt
-tests/references/rna_workflow/chr1_region_transcripts_ercc.fa.pac
-tests/references/rna_workflow/chr1_region_transcripts_ercc.fa.sa
-tests/references/rna_workflow/ENSEMBL_protein_coding_ccds_appris_firts10_ercc.bed
-tests/references/rna_workflow/ENSEMBL_protein_coding_ccds_appris_firts10_ercc.gtf
-tests/references/rna_workflow/ENSEMBL_protein_coding_ccds_appris_firts10.gff
+# Build #
+#########
+PolyAAnalysis.jl/docs/build*
