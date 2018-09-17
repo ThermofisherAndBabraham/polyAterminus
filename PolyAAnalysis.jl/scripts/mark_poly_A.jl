@@ -72,10 +72,11 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     	# Arry to collect results for output
         all_result = Array{String,1}()
         # Parse transcripts
+        re = Regex("([ATGC]{$minimum_not_polyA})A{$minimum_polyA_length,}")
         println(STDERR,"Collecting PolyA")
         time = @elapsed result = @parallel  (vcat) for record in collectedFasta
             get_polyA_prefixes(record,minimum_not_polyA,
-                              minimum_polyA_length,counter)
+                              minimum_polyA_length,re,counter)
         end
     	# get unique prefixes
         all_result = unique(result)
@@ -98,7 +99,7 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
         number_of_unque_prefixes = length(all_result)
         println(STDERR, "Loaded ....")
     end
-    return(index)
+    return index
 end
 
 """
@@ -136,7 +137,7 @@ function create_input_pipes(r1::String,r2::String, number_of_workers::Int64)::Tu
     end
     println(STDERR, "prefixes of input streams for R1 reads are: $r1_filename_tmp_prefix_ini")
     println(STDERR, "prefixes of input streams for R2 reads are: $r2_filename_tmp_prefix_ini")
-    return(r1_filename_tmp_prefix_ini,r2_filename_tmp_prefix_ini)
+    return r1_filename_tmp_prefix_ini,r2_filename_tmp_prefix_ini
 end
 
 
@@ -191,7 +192,8 @@ function trim_polyA_from_files(
     # value 1 marks that it has finished
     ct_finished = convert(SharedArray, zeros(Int64, nworkers()))
 
-
+    min_l = Int64(minimum_polyA_length / 2)
+    re = Regex("(A+[GTC])?(A{$min_l,})([GTC]A+)?")
 
     const fastqo_1_2_s_d = RemoteChannel(()->Channel{Tuple{String,String,String,String} }(100));
 
@@ -211,7 +213,8 @@ function trim_polyA_from_files(
             maximum_non_A_symbols::Int64,
             maximum_distance_with_prefix_database::Int64,
             minimum_poly_A_between::Int64,
-            include_polyA::Bool;
+            include_polyA::Bool,
+            re::Regex;
             debug_id="None",
             debug=false,
             buffer_size=10000
@@ -248,6 +251,7 @@ function trim_polyA_from_files(
                                                                 maximum_non_A_symbols,
                                                                 maximum_distance_with_prefix_database,
                                                                 minimum_poly_A_between,
+                                                                re,
                                                                 debug_id=debug_id,
                                                                 debug=debug
                                                                 )
@@ -345,7 +349,8 @@ function trim_polyA_from_files(
                                               maximum_non_A_symbols,
                                               maximum_distance_with_prefix_database,
                                               minimum_poly_A_between,
-                                              include_polyA;
+                                              include_polyA,
+                                              re;
                                               debug=debug,
                                               debug_id=debug_id
                                               )
