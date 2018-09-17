@@ -57,7 +57,7 @@ function main(args)
     statdframe[:PassedReads] = passreads
     statdframe[:PolyAReads] = pareads
     statdframe = sort!(statdframe, [:Chrmosome, :Position])
-    wrframe(parsed_args["outfile"]*"_detected_polyA.tsv", statdframe, '\t')
+    CSV.write(parsed_args["outfile"]*"_detected_polyA.tsv", statdframe, delim='\t')
     tic()
     intervalcolection = getintervals(statdframe)
     println("Got intervals in: ")
@@ -66,7 +66,7 @@ function main(args)
     joinedcollection = annotate_polya_sites(intervalcolection, gffcollection)
     println("Intersected in: ")
     toc()
-    wrframe(parsed_args["outfile"]*"_annotated_polyA.bed", joinedcollection, '\t')
+    CSV.write(parsed_args["outfile"]*"_annotated_polyA.bed", joinedcollection, delim='\t', header=false)
 
 end
 

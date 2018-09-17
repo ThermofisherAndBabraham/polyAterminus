@@ -102,11 +102,6 @@ function stats_poly_a(d::Dict{String,Array{Int16,1}})::DataFrame
 end
 
 
-function wrframe(fname::String, data::DataFrame, delim::Char)
-    CSV.write(fname, data, delim=delim)
-end
-
-
 function parseGFF3(gff3file::String)::Dict{String, IntervalCollection{String}}
     intcol = Dict{String, IntervalCollection{String}}()
 
