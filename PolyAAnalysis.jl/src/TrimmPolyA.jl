@@ -10,6 +10,7 @@
     - `fq_seq::String`: string for testing.
     - `minimum_polyA_length::Int64`: minimum length of polyA strech.
     - `maximum_non_A_symbols`::Int64: maximum numer of nonA symbols in polyA strech.
+    - `re:Regex`: regex to search for polyA.
 
     # Keyword Arguments
     - `maximum_search_fragment_length::Int64=50`: fragment length from 3' end.
