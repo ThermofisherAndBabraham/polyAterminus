@@ -314,8 +314,9 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
 
             if max_nonA_in_window < number_of_nonA
                 #test if a window towards 5' also contains non A sequences
-                to_5end_frag_end=fragment_start-1
-                to_5end_frag_start=to_5end_frag_end-window_length+1
+                to_5end_frag_end=fragment_start - 1
+                to_5end_frag_start=to_5end_frag_end - window_length + 1
+
                 if to_5end_frag_start < 1
                      to_5end_frag_start = 1
                 end
@@ -466,6 +467,7 @@ function trim_polyA_from_fastq_pair(
                 minimum_not_polyA,
                 minimum_polyA_length,
                 minimum_poly_A_between,debug=debug)
+
             if debug
                 println("Output of $trim_polyA_from_fastq_record")
                 println("Input seq",cosensus_extended_fwd_read)
@@ -478,8 +480,9 @@ function trim_polyA_from_fastq_pair(
             #check if the read is in pefixes list of natural polyA streches
             if has_proper_polyA
                 has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database,minimum_not_polyA)
+
                 if !has_proper_polyA
-                    fqo_trimmed=cosensus_extended_fwd_read
+                    fqo_trimmed = cosensus_extended_fwd_read
                 end
             end
     else
