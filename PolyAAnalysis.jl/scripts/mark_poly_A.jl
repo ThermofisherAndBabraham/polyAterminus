@@ -11,8 +11,6 @@ using FileIO
 using BioSequences
 using BufferedStreams
 using FMIndexes
-
-
 push!(LOAD_PATH, ".")
 using PolyAAnalysis
 
@@ -33,7 +31,6 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     minimum_polyA_length::Int64=20,
     number_of_workers::Int64=4,
     use_cached_results::Bool=true)::FMIndexes.FMIndex{7,UInt32}
-
 
     # file for caching
     if file != nothing
@@ -267,10 +264,12 @@ function trim_polyA_from_files(
                     println(fastq2_b,fastq2)
                 else
                     a = 1
+
                     if has_proper_polyA
                         println(fastq_s_b,fqo_trimmed)
             			ct_pair_with_proper_polyA[(myid()-1)] += 1
                         #get reverse complement of the polyA read
+
                         if include_polyA
                             name = FASTQ.identifier(fqo_trimmed)
                             description = FASTQ.description(fqo_trimmed)
@@ -414,6 +413,7 @@ function trim_polyA_from_files(
             finished = sum(ct_all)
             end_time = now()
             sleep_ct+=1
+
             if sleep_ct == 1
                 start_time = end_time
                 finished_first=finished
