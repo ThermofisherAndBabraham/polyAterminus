@@ -1,33 +1,36 @@
 #!/usr/bin/env julia
 
 """
+    function detect_polyA_in_a_string(fq_seq::String,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64;maximum_search_fragment_length::Int64=50,debug=false)
 
-function detect_polyA_in_a_string(
-    fq_seq::String,
-    minimum_polyA_length::Int64,
-    maximum_non_A_symbols::Int64;
-    debug=false
-    )::Bool
+    Checks if a string of a read contains polyA strechA starting seach from the 3'.
+    Once a g search once a strech is found. A first and last symbol of a strech must be A.
 
-Checks if a string of a read contains polyA strechA starting seach from the 3'
-A first and last symbol of a strech must be A.
-    fq_seq - string for testing
-    minimum_polyA_length - minimum length of polyA strech
-    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
+    # Arguments
+    - `fq_seq::String`: string for testing.
+    - `minimum_polyA_length::Int64`: minimum length of polyA strech.
+    - `maximum_non_A_symbols`::Int64: maximum numer of nonA symbols in polyA strech.
+    - `re:Regex`: regex to search for polyA.
+
+    # Keyword Arguments
+    - `maximum_search_fragment_length::Int64=50`: fragment length from 3' end.
 """
 function detect_polyA_in_a_string(
     fq_seq::String,
     minimum_polyA_length::Int64,
-    maximum_non_A_symbols::Int64;
+    maximum_non_A_symbols::Int64,
+    re::Regex;
     maximum_search_fragment_length::Int64=50,
     debug=false
     )::Bool
 
+    if maximum_non_A_symbols == 1
+        return detect_polyA_in_a_string(fq_seq,minimum_polyA_length,maximum_search_fragment_length,re,debug)
+    end
     has_poly_a = false
     fq_length = length(fq_seq)
     window_position_from_3_end = minimum_polyA_length
     startini = minimum_polyA_length
-
 
     while (window_position_from_3_end < maximum_search_fragment_length) && (startini  != fq_length)
         window_position_from_3_end += 1
@@ -55,28 +58,85 @@ function detect_polyA_in_a_string(
         end
         startini+=1
     end
+    return has_poly_a
+end
 
-    return(has_poly_a)
+
+function detect_polyA_in_a_string(
+    fq_seq::String,
+    minimum_polyA_length::Int64,
+    maximum_search_fragment_length::Int64,
+    re::Regex,
+    debug::Bool
+    )::Bool
+
+    fq_seq = uppercase(fq_seq)
+    fq_length = length(fq_seq)
+
+    if fq_length <= maximum_search_fragment_length
+        if fq_length < minimum_polyA_length
+            if debug
+                println(STDERR,"ERROR! Sequence too short to detect polyA")
+            end
+            return false
+        else
+            maximum_search_fragment_length = fq_length - 1
+        end
+    end
+    fq_seq = reverse(fq_seq[end-maximum_search_fragment_length:end])
+
+    for m in eachmatch(re,fq_seq, true)
+        if m[1] == nothing
+            len1 = 0
+        else
+            len1 = length(m[1])
+        end
+
+        if m[3] == nothing
+            len3 = 0
+        else
+            len3 = length(m[3])
+        end
+
+        len2 = length(m[2])
+
+        if len2 >= minimum_polyA_length
+            return true
+        elseif len1 + len2 >= minimum_polyA_length || len3 + len2 >= minimum_polyA_length
+            return true
+        end
+    end
+    return false
 end
 
 
 """
-Tries to merge and extend forward read
-    fq_seq1 - string of forward read
-    fq_seq2 - string of reverse read reverse complement
+    extend_poly_A(fq_seq1::FASTQ.Record,fq_seq2::FASTQ.Record)
+
+    Tries to merge and extend forward read.
+
+    # Arguments
+    - `fq_seq1::FASTQ.Record`: string of forward read.
+    - `fq_seq2::FASTQ.Record`: string of reverse read reverse complement.
 """
 function extend_poly_A(
     fq_seq1::FASTQ.Record,
     fq_seq2::FASTQ.Record)::FASTQ.Record
 
-    return(fq_seq1)
+    return fq_seq1
 end
 
+
 """
-check if the read is in pefixes list of naturall polyA sreches
-    fqo_trimmed - fastq record
-    prefixes - array of natural prefixes
-    maximum_distance_with_prefix_database - maximum Levenstain distance
+    check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
+
+    Check if the read is in pefixes list of naturall polyA sreches.
+
+    # Arguments
+    - `fqo_trimmed::FASTQ.Record,`: fastq record.
+    - `prefixes::FMIndexes.FMIndex{7,UInt32}`: array of natural prefixes.
+    - `maximum_distance_with_prefix_database::Int64`: maximum Levenstain distance.
+    - `minimum_not_polyA::Int64`: Minimum of polyA lenght.
 """
 function check_polyA_prefixes(
     fqo_trimmed::FASTQ.Record,
@@ -84,17 +144,22 @@ function check_polyA_prefixes(
     maximum_distance_with_prefix_database::Int64,
     minimum_not_polyA::Int64
     )::Bool
+
     read_substring_for_check=String(FASTQ.sequence(fqo_trimmed))[(end-minimum_not_polyA+1):end]
 
     has_no_match=(count(read_substring_for_check,prefixes)<1)
     return  has_no_match
 end
 
+
 """
-function that trimmes 3' end of polyA having sequence from non A symbols that might originate fue to reamins of adapters or sequencing artefacts
-Arguments:
-    seq - read sequence in String
-    minimum_poly_A_between - minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
+    trim_polyA_3end(seq::String, minimum_poly_A_between::Int64)
+
+    Function that trimmes 3' end of polyA having sequence from non A symbols that might originate fue to reamins of adapters or sequencing artefacts
+
+    # Arguments
+    - `seq::String`: read sequence in String
+    - `minimum_poly_A_between::Int64`: minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
 """
 function trim_polyA_3end(seq::String,
     minimum_poly_A_between::Int64
@@ -122,25 +187,32 @@ function trim_polyA_3end(seq::String,
     else
         out = (seq[1:trimming_position-1],length_sequence-trimming_position+1)
     end
-    return(out)
+    return out
 end
 
+
 """
-counts not A in a string
+    count_nona(seq::String)
+
+    Counts not A in a string.
 """
 function count_nona(seq::String)::Int64
 
     ct = 0
+
     for s in seq
         if s != 'A'
             ct += 1
         end
     end
-    return(ct)
+    return ct
 end
 
+
 """
-finds first not A from the end (3')
+    first_nona(seq::String)
+
+    Finds first not A from the end (3')
 """
 function first_nona(seq::String)::Int64
 
@@ -154,22 +226,24 @@ function first_nona(seq::String)::Int64
         end
         ct += 1
     end
-    return(ct)
+    return ct
 end
 
 
 """
-function that trimmes 3 polyA tail of a given fastq entry and outputs trimmed read with number of polyA indicated in read's name
-Arguments:
-    minimum_not_polyA - minimum length of not polyA strech in a read
-    minimum_polyA_length - minimum length of polyA strech
-    minimum_poly_A_between - minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
-Keywords arguments:
-    debug - turns out additional output
-    window_length - windows size for polyA trimming
-    max_nonA_in_window - tollerated nonA number per window
+    Function that trimmes 3 polyA tail of a given fastq entry and outputs trimmed read with number of polyA indicated in read's name
 
-The algorithms works like:
+    # Arguments
+    - `minimum_not_polyA::Int64`: minimum length of not polyA strech in a read
+    - `minimum_polyA_length::Int64`: minimum length of polyA strech
+    - `minimum_poly_A_between::Int64`: minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
+
+    # Keywords arguments
+    - `debug::Bool`: turns out additional output
+    - `window_length::Int64`: windows size for polyA trimming
+    - `max_nonA_in_window::Int64`: tollerated nonA number per window
+
+    # The algorithms works like
     1. Trimmes offs remains of adapters at the 3'
     2. Search for a window wich exceeds nonA limit and has no other high A content window towards 5' end
     3. Ajusts the A position in the window
@@ -240,8 +314,9 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
 
             if max_nonA_in_window < number_of_nonA
                 #test if a window towards 5' also contains non A sequences
-                to_5end_frag_end=fragment_start-1
-                to_5end_frag_start=to_5end_frag_end-window_length+1
+                to_5end_frag_end=fragment_start - 1
+                to_5end_frag_start=to_5end_frag_end - window_length + 1
+
                 if to_5end_frag_start < 1
                      to_5end_frag_start = 1
                 end
@@ -279,70 +354,82 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
     end
 
     if has_proper_polyA
-        return(fqo,has_proper_polyA,polyA_detected)
+        return fqo,has_proper_polyA,polyA_detected
     else
-        return(fq,has_proper_polyA,polyA_detected)
+        return fq,has_proper_polyA,polyA_detected
     end
 
 end
 
 
 """
-returns minimum kmer streches of not polyA ins a supplied transcript sequences
-Arguments:
-    sequence - string with polyA streches (type - BioSequences reference seq)
-    minimum_not_polyA - minimum length of not polyA strech
-    minimum_polyA_length - minimum length of polyA strech
-"""
-function get_polyA_prefixes(fasta_record::FASTA.Record,
-    minimum_not_polyA::Int64,
-    minimum_polyA_length::Int64)::Array{String,1}
+    get_polyA_prefixes(fasta_record::FASTA.Record,minimum_not_polyA::Int64,minimum_polyA_length::Int64)
 
-    output = Array{String,1}()
-    re = Regex("[ATGC]{$minimum_not_polyA}A{$minimum_polyA_length,}")
+    Returns minimum kmer streches of not polyA ins a supplied transcript sequences
 
-    for m in eachmatch(re, String(sequence(fasta_record)))
-        prefix_part = m.match[1:minimum_not_polyA]
-        push!(output,prefix_part)
-    end
-    return(output)
-end
-
-"""
-returns minimum kmer streches of not polyA ins a supplied transcript sequences
-Arguments:
-    sequence - string with polyA streches (type - BioSequences reference seq)
-    minimum_not_polyA - minimum length of not polyA strech
-    minimum_polyA_length - minimum length of polyA strech
-    counter - shared array for tracking processed reads - length matches julia workers
+    # Arguments
+    - `sequence::FASTA.Record`: string with polyA streches (type - BioSequences reference seq)
+    - `minimum_not_polyA::Int64`: minimum length of not polyA strech
+    - `minimum_polyA_length::Int64`: minimum length of polyA strech
 """
 function get_polyA_prefixes(fasta_record::FASTA.Record,
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
+    re::Regex)::Array{String,1}
+
+    output = Array{String,1}()
+
+    for m in eachmatch(re, String(sequence(fasta_record)))
+        push!(output,m[1])
+    end
+    return output
+end
+
+
+"""
+    get_polyA_prefixes(fasta_record::FASTA.Record,minimum_not_polyA::Int64,minimum_polyA_length::Int64,counter::SharedArray)
+
+    Returns minimum kmer streches of not polyA ins a supplied transcript sequences
+
+    # Arguments
+    - `sequence::FASTA.Record`: string with polyA streches (type - BioSequences reference seq)
+    - `minimum_not_polyA::Int64`: minimum length of not polyA strech
+    - `minimum_polyA_length::Int64`: minimum length of polyA strech
+    - `counter`: shared array for tracking processed reads - length matches julia workers
+"""
+function get_polyA_prefixes(fasta_record::FASTA.Record,
+    minimum_not_polyA::Int64,
+    minimum_polyA_length::Int64,
+    re::Regex,
     counter::SharedArray)::Array{String,1}
-    output = get_polyA_prefixes(fasta_record,minimum_not_polyA,minimum_polyA_length)
+
+    output = get_polyA_prefixes(fasta_record,minimum_not_polyA,minimum_polyA_length,re)
     counter[(myid()-1)] += 1
     total_jobs = sum(counter)
+
     if mod(total_jobs,10000) == 0
       print(STDERR,"Number of parsed transcripts = $total_jobs\r")
     end
-    return(output)
+    return output
 end
 
-"""
-finds and trims polyA having reads from a pair of fastq records
-Arguments:
-    fastq1 - FASTQ record
-    fastq2 - FASTQ record
-    prefixes - array of prefixes of natural polyA
-    minimum_not_polyA - minimum length of not polyA strech in a read
-    minimum_polyA_length - minimum length of polyA strech
-    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
-    maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
-    minimum_poly_A_between - minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
 
 """
+    trim_polyA_from_fastq_pair(fastq1::FASTQ.Record,fastq2::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64,maximum_distance_with_prefix_database::Int64,minimum_poly_A_between::Int64)
 
+    Finds and trims polyA having reads from a pair of fastq records
+
+    # Arguments
+    - `fastq1::FASTQ.Record`: FASTQ record
+    - `fastq2::FASTQ.Record`: FASTQ record
+    - `prefixes::FMIndexes.FMIndex{7,UInt32}`: array of prefixes of natural polyA
+    - `minimum_not_polyA::Int64`: minimum length of not polyA strech in a read
+    - `minimum_polyA_length::Int64`: minimum length of polyA strech
+    - `maximum_non_A_symbols::Int64`: maximum numer of nonA symbols in polyA strech
+    - `maximum_distance_with_prefix_database::Int64`: allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
+    - `minimum_poly_A_between::Int64`: minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
+
+"""
 function trim_polyA_from_fastq_pair(
     fastq1::FASTQ.Record,
     fastq2::FASTQ.Record,
@@ -351,7 +438,8 @@ function trim_polyA_from_fastq_pair(
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
     maximum_distance_with_prefix_database::Int64,
-    minimum_poly_A_between::Int64;
+    minimum_poly_A_between::Int64,
+    re::Regex;
     debug_id="None",
     debug=false
     )
@@ -364,21 +452,22 @@ function trim_polyA_from_fastq_pair(
     if debug
         println("for_read:", "\n", fastq1, "\n")
         println("rev_read:", "\n", fastq2, "\n")
-        println("seq_for_read", seq_for_read, "\n")
-        println("revseq_rev_read", revseq_rev_read, "\n")
-        println("Is polyA in seq_for_read: ", detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols))
-        println("Is polyA in revseq_rev_read: ", detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols))
+        println("seq_for_read", seq_for_read,"\n")
+        println("revseq_rev_read", revseq_rev_read,"\n")
+        println("Is polyA in seq_for_read: ", detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols,re))
+        println("Is polyA in revseq_rev_read: ", detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols,re))
         println("used parameter: minimum_polyA_length $minimum_polyA_length, maximum_non_A_symbols $maximum_non_A_symbols")
     end
 
-    if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols) &&
-        detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols)
+    if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols,re) &&
+        detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols,re)
             #tries sto esxtend polyA
             cosensus_extended_fwd_read=extend_poly_A(fastq1,fastq2)
             fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_record(cosensus_extended_fwd_read,
                 minimum_not_polyA,
                 minimum_polyA_length,
                 minimum_poly_A_between,debug=debug)
+
             if debug
                 println("Output of $trim_polyA_from_fastq_record")
                 println("Input seq",cosensus_extended_fwd_read)
@@ -391,36 +480,34 @@ function trim_polyA_from_fastq_pair(
             #check if the read is in pefixes list of natural polyA streches
             if has_proper_polyA
                 has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database,minimum_not_polyA)
+
                 if !has_proper_polyA
-                    fqo_trimmed=cosensus_extended_fwd_read
+                    fqo_trimmed = cosensus_extended_fwd_read
                 end
             end
     else
         fqo_trimmed = fastq1
     end
-    return(fqo_trimmed, has_proper_polyA, polyA_detected)
+    return fqo_trimmed, has_proper_polyA, polyA_detected
 end
 
 
 """
-finds and trims polyA having reads from a pair of fastq records
-Arguments:
-    fastq1 - FASTQ record
-    fastq2 - FASTQ record
-    prefixes - array of prefixes of natural polyA
-    minimum_not_polyA - minimum length of not polyA strech in a read
-    minimum_polyA_length - minimum length of polyA strech
-    maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
-    maximum_distance_with_prefix_database - allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
-    minimum_poly_A_between - minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
-    include_polyA - Includes output polyA sequences as pseudo pair end's  into output fastq
-    fastqo1 - output stream for forward fastq.gz
-    fastqo2 - output stream for reverse fastq.gz
-    fastqo_s - output stream  for polyA trimmed and marked reads (forward or merged reads only)
-    fastqo_d - output stream  for discarded reads (forward or merged reads only)
-    debug_id - name of fastq entry that should be debuged and additional infor printed our
-"""
+    trim_polyA_from_fastq_pair
 
+    Finds and trims polyA having reads from a pair of fastq records
+
+    # Arguments
+    - `fastq_pairs::RemoteChannel`: channel with fastq sequences.
+    - `prefixes::Array{String,1}`: array of prefixes of natural polyA.
+    - `minimum_not_polyA::Int64`: minimum length of not polyA strech in a read.
+    - `minimum_polyA_length::Int64`: minimum length of polyA strech.
+    - `maximum_non_A_symbols::Int64`: maximum numer of nonA symbols in polyA strech.
+    - `maximum_distance_with_prefix_database::Int64`: allowed Levenshtein distance between prefix of natural polyA in transcripts and the read.
+    - `minimum_poly_A_between::Int64`: minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end).
+    - `include_polyA::Bool`: Includes output polyA sequences as pseudo pair end's  into output fastq.
+    - `fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}}`: channel for fastq out.
+"""
 function trim_polyA_from_fastq_pair(
     fastq_pairs::RemoteChannel,
     prefixes::Array{String,1},
@@ -436,7 +523,7 @@ function trim_polyA_from_fastq_pair(
 	ct_pair_with_discarded_polyA::SharedArray,
     fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}};
     debug_id="None",
-    debug=false   )
+    debug=false)
 
     fastq1_b = IOBuffer()
     fastq2_b = IOBuffer()

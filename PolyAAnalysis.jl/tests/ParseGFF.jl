@@ -5,6 +5,7 @@
 
 dcAll = Dict("Seq" => [String("1-5,8-12,+"), String("1-5,+"), String("1-20,+")])
 append!(dcAll["Seq"],[String("1-5,8-12,-"), String("1-5,-"), String("1-20,-")])
+append!(dcAll["Seq"],[String("1-20,5-10,+"), String("1-20,5-10,-")])
 outRecordsAll=Array{FASTA.Record,1}()
 
 # + strand testing
@@ -47,6 +48,20 @@ push!(outRecordsAll,recordOut)
 
 dc = Dict("Seq" => [String("1-20,-")])
 recordOut = FASTA.Record("Seq", dna"CAGTCGGTGAGCGCCACCAC")
+outRecords = Array{FASTA.Record,1}()
+push!(outRecords,recordOut)
+push!(outRecordsAll,recordOut)
+@test outRecords == get_transcripts_from_dict(record,dc)
+
+dc = Dict("Seq" => [String("1-20,5-10,+")])
+recordOut = FASTA.Record("Seq", dna"GTGGTGGCGCTCACCGACTGTGGCGC")
+outRecords = Array{FASTA.Record,1}()
+push!(outRecords,recordOut)
+push!(outRecordsAll,recordOut)
+@test outRecords == get_transcripts_from_dict(record,dc)
+
+dc = Dict("Seq" => [String("1-20,5-10,-")])
+recordOut = FASTA.Record("Seq", dna"GCGCCACAGTCGGTGAGCGCCACCAC")
 outRecords = Array{FASTA.Record,1}()
 push!(outRecords,recordOut)
 push!(outRecordsAll,recordOut)

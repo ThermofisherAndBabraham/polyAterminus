@@ -1,28 +1,51 @@
-using BioSequences
-using Base.Test
-push!(LOAD_PATH, "../../")
-using PolyAAnalysis
-# """
-# returns minimum kmer streches of not polyA ins a supplied transcript sequences
-# Arguments:
-#     sequence - string with polyA streches
-#     minimum_not_polyA - minimum length of not polyA strech
-#     minimum_polyA_length - minimum length of polyA strech
-#     maximum_non_A_symbols - maximum numer of nonA symbols in polyA strech
-#     minimum_distance_from_non_poly_A - minimum number of any not polyA symbol in polyA strech from the non polyA
-# """
-# function get_polyA_prefixes(sequence::String,minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64)::Array{String,1}
-#
 
+##
+## function get_polyA_prefixes(fasta_record::FASTA.Record,
+##    minimum_not_polyA::Int64,
+##    minimum_polyA_length::Int64)::Array{String,1}
+##
+minimum_not_polyA = 20
+minimum_polyA_length = 10
+re = Regex("([ATGC]{$minimum_not_polyA})A{$minimum_polyA_length,}")
 
+# Test set 1 just a simple nt real example
+seq = dna"ATCCTTGGCTTTCTTCCGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGGGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+output = ["ATCCTTGGCTTTCTTCCGGG","CAAAAAAAAAAAAAAAAAAA", "GGGGGGGGGGGGGGGGGGGG"]
+ref_seq=FASTA.Record("seq",seq)
+@test get_polyA_prefixes(ref_seq,20,10,re)  == output
 
+# Test set 2 no AAAA
+seq = dna"ATCCTTGGCTTTCTTCCGGGCGGGGGGGGGGGGGGGGGGGGAAA"
+output = []
+ref_seq=FASTA.Record("seq",seq)
+@test get_polyA_prefixes(ref_seq,20,10,re)  == output
 
-#test set 1 just a simple nt real example
-seq = "ATCCTTGGCTTTCTTCCGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGGGGGGGGGGGGGGGGGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-output = ["ATCCTTGGCTTTCTTCCGGG", "GGGGGGGGGGGGGGGGGGGG"]
-ref_seq=ReferenceSequence(BioSequence{DNAAlphabet{4}}(seq))
+# Test set 3
+seq = dna"ATCCTTGGCTTTCTTCCGGGCGGGGGGGGGGGGGGGGAGAGAGAAAAAAAAAGAAAAAAAAAA"
+output = ["GGGGAGAGAGAAAAAAAAAG"]
+ref_seq=FASTA.Record("seq",seq)
+@test get_polyA_prefixes(ref_seq,20,10,re)  == output
 
-#println()
+# Test set 4 Only AA...
+seq = dna"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+output = ["AAAAAAAAAAAAAAAAAAAA"]
+ref_seq=FASTA.Record("seq",seq)
+@test get_polyA_prefixes(ref_seq,20,10,re)  == output
 
-#test trimming
-@test get_polyA_prefixes(ref_seq,20,10,1,10)  == output
+# Test set 5 Only AA... but too short
+seq = dna"AAAAAAAAAAA"
+output = []
+ref_seq=FASTA.Record("seq",seq)
+@test get_polyA_prefixes(ref_seq,20,10,re)  == output
+
+# Test set 6
+seq = dna"AAAAAAAAAAGGGGGGGGGGAAAAAAAAAA"
+output = ["AAAAAAAAAAGGGGGGGGGG"]
+ref_seq=FASTA.Record("seq",seq)
+@test get_polyA_prefixes(ref_seq,20,10,re)  == output
+
+# Test set 7 too short
+seq = dna"GTCGTCGTC"
+output = []
+ref_seq=FASTA.Record("seq",seq)
+@test get_polyA_prefixes(ref_seq,20,10,re)  == output

@@ -27,12 +27,15 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1
         featureType = GFF3.featuretype(record)
         # Check if new feature found, then push exons
         if featureType == "transcript" || featureType == "mRNA"
+
             if currtrans != string(GFF3.attributes(record, "ID")[1]) && currtrans != ""
+
                 if coordex == ""
                     println(STDERR,"ERROR! Exon is empty!")
                 else
                     coordex = coordex * strnd
                 end
+
                 if !(in(coordex, transdict[chr]))
                     push!(transdict[chr],coordex)
                     num += 1
@@ -65,6 +68,7 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1
     # Adds If exon was last record in gff3 file.
     if coordex != ""
         coordex = coordex * strnd
+
         if !(in(coordex, transdict[chr]))
             push!(transdict[chr],coordex)
             num += 1
@@ -109,11 +113,13 @@ function get_transcripts_from_dict(record::FASTA.Record,
     if haskey(transdict,chr)
         # Reads transcripts in Chromosome from transcripts dict
         d = transdict[chr]
+
         for trans in d
             transseq = dna""
             transcoordsandstrand = split(trans,",")
             transcoords = transcoordsandstrand[1:end-1]
             strand = transcoordsandstrand[end]
+
             for coords in transcoords
                 coords = split(coords, "-")
                 coor1 = parse(Int, coords[1])
