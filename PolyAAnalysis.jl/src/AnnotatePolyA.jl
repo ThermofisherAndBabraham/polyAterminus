@@ -17,6 +17,7 @@ function readbam(bam::String, strandness::String)
 
     while !eof(reader)
         read!(reader, record)
+
         if BAM.ismapped(record)
             rfname::String = BAM.refname(record)
             flag = BAM.flag(record)
@@ -189,7 +190,7 @@ function parserecord(r::GFF3.Record)::String
             end
         end
         md = string(md,";")
-    catch   md = string(md,"ID=;")
+    catch md = string(md,"ID=;")
     end
 
     try s = GFF3.attributes(r, "Parent")
@@ -202,7 +203,7 @@ function parserecord(r::GFF3.Record)::String
             end
         end
         md = string(md,";")
-    catch   md = string(md,"Parent=;")
+    catch md = string(md,"Parent=;")
     end
 
     try s = GFF3.attributes(r, "gene_id")
@@ -215,7 +216,7 @@ function parserecord(r::GFF3.Record)::String
             end
         end
         md = string(md,";")
-    catch   md = string(md,"gene_id=;")
+    catch md = string(md,"gene_id=;")
     end
 
     try s = GFF3.attributes(r, "transcript_id")
@@ -228,7 +229,7 @@ function parserecord(r::GFF3.Record)::String
             end
         end
         md = string(md,";")
-    catch   md = string(md,"transcript_id=;")
+    catch md = string(md,"transcript_id=;")
     end
 
     try s = GFF3.attributes(r, "gene_type")
@@ -241,7 +242,7 @@ function parserecord(r::GFF3.Record)::String
             end
         end
         md = string(md,";")
-    catch   md = string(md,"gene_type=;")
+    catch md = string(md,"gene_type=;")
     end
 
     try s = GFF3.attributes(r, "gene_name")
@@ -254,7 +255,7 @@ function parserecord(r::GFF3.Record)::String
             end
         end
         md = string(md,";")
-    catch   md = string(md,"gene_name=;")
+    catch md = string(md,"gene_name=;")
     end
 
     md = string(md,"ftype=",GFF3.featuretype(r))
@@ -273,6 +274,7 @@ function getintervals(dframe::DataFrame)::IntervalCollection{String}
     intcol = IntervalCollection{String}()
 
     for i in eachrow(dframe)
+
         if i[3] == "+"
             s = Strand('+')
         elseif i[3] == "-"
@@ -341,6 +343,7 @@ function annotate_polya_sites(a::IntervalCollection, b::Dict{String, IntervalCol
                     gn = split(splt[6],"=")[2]
                     bt = split(splt[5],"=")[2]
                     ct += 1
+
                     if strand(i1) == Strand('-')
                         push!(dfn, [seqname(i1) it1 it2 gn c str ft me mi mx bt])
                     else
