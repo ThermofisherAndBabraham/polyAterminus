@@ -6,8 +6,8 @@
     Computes and returns array of transcripts from reference genome and gff3 file.
 
     # Arguments
-    - `fa::String`: path to fasta file of reference genome.
-    - `gff::String`: path to gff3 transcripts file.
+    - `fa::String`: path to fasta file of reference genome
+    - `gff::String`: path to gff3 transcripts file
 """
 function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1}
 
@@ -27,9 +27,7 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1
         featureType = GFF3.featuretype(record)
         # Check if new feature found, then push exons
         if featureType == "transcript" || featureType == "mRNA"
-
             if currtrans != string(GFF3.attributes(record, "ID")[1]) && currtrans != ""
-
                 if coordex == ""
                     println(STDERR,"ERROR! Exon is empty!")
                 else
@@ -98,11 +96,11 @@ end
 """
     get_transcripts_from_dict(record::BioSequences.FASTA.Record, transdict::Dict)
 
-    Function returns an array of FASTA recors splitted into fragment by given size.
+    Function returns transcripts list as an array of FASTA records.
 
     # Arguments
-    - `record::BioSequences.FASTA.Record`: Fasta record of sequence.
-    - `size::Int64`: size of fragment.
+    - `record::BioSequences.FASTA.Record`: fasta record of sequence
+    - `transdict::Dict`: dictionary with transcripts coordinates
 """
 function get_transcripts_from_dict(record::FASTA.Record,
     transdict::Dict)::Array{FASTA.Record,1}
