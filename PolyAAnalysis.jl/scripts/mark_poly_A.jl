@@ -11,7 +11,8 @@ using FileIO
 using BioSequences
 using BufferedStreams
 using FMIndexes
-push!(LOAD_PATH, ".")
+NEW_PATH=join(split(Base.source_path(),"/")[1:end-3],"/")
+push!(LOAD_PATH, NEW_PATH)
 using PolyAAnalysis
 
 
@@ -33,7 +34,7 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     minimum_not_polyA::Int64=20,
     minimum_polyA_length::Int64=20,
     number_of_workers::Int64=4,
-    use_cached_results::Bool=true)::FMIndexes.FMIndex{7,UInt32}
+    use_cached_results::Bool=true)::FMIndexes.FMIndex{7,}
 
     # file for caching
     if file != nothing
@@ -171,7 +172,7 @@ Arguments:
 function trim_polyA_from_files(
     fastq1::String,
     fastq2::String,
-    prefixes::FMIndexes.FMIndex{7,UInt32},
+    prefixes::FMIndexes.FMIndex{7,},
     number_of_workers::Int64,
     output_prefix::String,
     minimum_not_polyA::Int64,
@@ -217,7 +218,7 @@ function trim_polyA_from_files(
             ct_pair_with_discarded_polyA::SharedArray{Int64,1},
             ct_finished::SharedArray{Int64,1},
             ct_output_chunks::SharedArray{Int64,1},
-            prefixes::FMIndexes.FMIndex{7,UInt32},
+            prefixes::FMIndexes.FMIndex{7,},
             minimum_not_polyA::Int64,
             minimum_polyA_length::Int64,
             maximum_non_A_symbols::Int64,
