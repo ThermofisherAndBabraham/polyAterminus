@@ -42,6 +42,9 @@
 
 PolyAAnalysis is designed to find and annotate polyA sites.
 
+* `Optional` For running scripts separately without full path
+    add PolyAAnalysis.jl/scripts/ directory to PATH variable.
+
 ### Trimming and tagging reads with polyA sequence.
 
 1. If transcripts fasta are available trim and tag polyA reads in your fastq files by running:
