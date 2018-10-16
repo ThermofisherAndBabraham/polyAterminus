@@ -24,11 +24,10 @@ MACHINE:
 ##############
 # References #
 ##############
-REFERENCE: /media/root/ocean/Databases/hg38/GRCh38.primary_assembly.genome.fa
-polyA_ref: datasets/bbmap/polyA.fa
-TRANSCRIPTS: /media/root/ocean/Databases/hg38/gencode.v28.transcripts.fa.gz
-GFF3: /media/root/ocean/Databases/hg38/gencode.v28.primary_assembly.annotation.gff3
-GTF: /media/root/ocean/Databases/hg38/gencode.v28.primary_assembly.annotation.gtf
+REFERENCE: /media/root/ocean/Databases/HUMAN/hg38/GRCh38.primary_assembly.genome.fa
+TRANSCRIPTS: /media/root/ocean/Databases/HUMAN/hg38/gencode.v28.transcripts.fa
+GFF3: /media/root/ocean/Databases/HUMAN/hg38/gencode.v28.primary_assembly.annotation.gff3
+GTF: /media/root/ocean/Databases/HUMAN/hg38/gencode.v28.primary_assembly.annotation.gtf
 
 ###################
 # Fastqc options. #

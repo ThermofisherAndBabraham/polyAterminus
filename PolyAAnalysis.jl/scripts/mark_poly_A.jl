@@ -96,7 +96,6 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
         println(STDERR ,"Loading FMI index of colected unique polyA prefixes in known transcriptsfrom  file $jldFile")
         data = load(jldFile)
         index = data["index"]
-        number_of_unque_prefixes = length(all_result)
         println(STDERR, "Loaded ....")
     end
     return index
@@ -104,52 +103,43 @@ end
 
 
 """
-create_input_pipes(r1::String,r2::String, number_of_workers::Int64)
+create_input_channels(number_of_workers::Int64)
 
 Splits reading of files in such a number of named pipes what matches number of additional julia workers.
 Each worker reads a separate fraction of all reads (ex. in case of 3 workers - 1/3).
 
 Arguments:
-    `r1::String`: name of R1 fastq file
-    `r2::String`: name of R2 fastq file
+
     `number_of_workers::Int64`: numer of workers used
+    `buffer_size::Int64`: channel capacities
+
 """
-function create_input_pipes(r1::String,r2::String, number_of_workers::Int64)::Tuple{String,String}
-
-    r1_filename = basename(r1)
-    r2_filename = basename(r2)
-    rand_suffix = randstring()
-    r1_filename_tmp_prefix_ini = "/tmp/" * r1_filename * rand_suffix
-    r2_filename_tmp_prefix_ini = "/tmp/" * r2_filename * rand_suffix
-    start = 0
-    step = 0
-
+function create_input_channels(number_of_workers::Int64,buffer_size::Int64)::Array{RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},1}
+    output=Array{RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},1}()
     for i in range(1,number_of_workers)
-        r1_filename_tmp_prefix = r1_filename_tmp_prefix_ini * "_" * string(i)
-        r2_filename_tmp_prefix = r2_filename_tmp_prefix_ini * "_" * string(i)
-        start = 4 * i - 3
-        step = 4 * number_of_workers
-
-        if isfifo(r1_filename_tmp_prefix)
-            rm(r1_filename_tmp_prefix)
-        end
-
-        if isfifo(r2_filename_tmp_prefix)
-            rm(r2_filename_tmp_prefix)
-        end
-
-        cmd1 = "mkfifo $r1_filename_tmp_prefix ; zcat  $r1 | sed -ne '$start~$step{N;N;N;p}'> $r1_filename_tmp_prefix & "
-        cmd2 = "mkfifo $r2_filename_tmp_prefix ; zcat  $r2 | sed -ne '$start~$step{N;N;N;p}'> $r2_filename_tmp_prefix & "
-        run(`bash -c $cmd1`)
-        run(`bash -c $cmd2`)
+        push!(output, RemoteChannel(()->Channel{Tuple{NTuple{4,String},NTuple{4,String}}}(buffer_size),i+1))
     end
-    println(STDERR, "prefixes of input streams for R1 reads are: $r1_filename_tmp_prefix_ini")
-    println(STDERR, "prefixes of input streams for R2 reads are: $r2_filename_tmp_prefix_ini")
-    return r1_filename_tmp_prefix_ini,r2_filename_tmp_prefix_ini
+    return output
 end
 
 
-"""
+# """
+# create_input_channels(r1::String,r2::String, number_of_workers::Int64)
+#
+# Splits reading of files in such a number of named pipes what matches number of additional julia workers.
+# Each worker reads a separate fraction of all reads (ex. in case of 3 workers - 1/3).
+#
+# Arguments:
+#     `r1::String`: name of R1 fastq file
+#     `r2::String`: name of R2 fastq file
+#     `input_channels::Array{RemoteChannel{Channel{Tuple{String,String}}},1}`
+# """
+
+
+
+
+
+"""()
 trim_polyA_from_files(...)
 
 finds and trims polyA having reads from a fastq files pair
@@ -166,7 +156,6 @@ Arguments:
     `maximum_distance_with_prefix_database::Int64`: allowed Levenshtein distance between prefix of natural polyA in transcripts and the read
     `minimum_poly_A_between::Int64`: minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end)
     `include_polyA::String`: includes output polyA sequences as pseudo pair end's  into output fastq
-    `analysis_partition_size::Int64`: size of analysis partition
 """
 function trim_polyA_from_files(
     fastq1::String,
@@ -180,12 +169,49 @@ function trim_polyA_from_files(
     maximum_distance_with_prefix_database::Int64,
     minimum_poly_A_between::Int64,
     include_polyA::Bool;
-    analysis_partition_size::Int64=100
     )
 
     #Create input streams
-    r1_pipe_prefix,r2_pipe_prefix = create_input_pipes(fastq1,fastq2,number_of_workers)
+    input_channels = create_input_channels(number_of_workers,1)
+    #start reading and filling in input channels
+    #@schedule fill_input_channels(fastq1,fastq2,input_channels)
+    @everywhere function fill_input_channels(r1::String,r2::String, input_channels::Array{RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},1})
+        number_of_workers=length(input_channels)
+        r1_filename = basename(r1)
+        r2_filename = basename(r2)
+        rand_suffix = randstring()
+        r1_filename_tmp_prefix_ini = "/tmp/" * r1_filename * rand_suffix
+        r2_filename_tmp_prefix_ini = "/tmp/" * r2_filename * rand_suffix
+        cmd1 = "mkfifo $r1_filename_tmp_prefix_ini ; zcat  $r1 > $r1_filename_tmp_prefix_ini & "
+        cmd2 = "mkfifo $r2_filename_tmp_prefix_ini ; zcat  $r2 > $r2_filename_tmp_prefix_ini & "
+        run(`bash -c $cmd1`)
+        run(`bash -c $cmd2`)
+        f1_file = open(r1_filename_tmp_prefix_ini,"r")
+        f2_file = open(r2_filename_tmp_prefix_ini,"r")
+        line=0
+        r1_part = ""
+        r2_part = ""
 
+        ct_all = 0
+        for part in partition(zip(partition(eachline(f1_file),4),partition(eachline(f2_file),4)),10)
+            # push outputs in  chunks
+            @sync for chunks_for_channels in partition(part,number_of_workers)
+                for (input_channel,chunk_for_channel) in zip(input_channels,chunks_for_channels)
+                    @async put!(input_channel,chunk_for_channel)
+                end
+            end
+        end
+        for i in 1:number_of_workers
+            #Marks end of file reading
+            put!(input_channels[i],(("END","","",""),("END","","","")))
+        end
+        close(f1_file)
+        close(f2_file)
+    end
+
+    remote_do(fill_input_channels,workers()[end],fastq1,fastq2,input_channels)
+    #@schedule fill_input_channels(fastq1,fastq2,input_channels)
+    println("Scheduled")
     #counter for jobs
     ct_jobs = 0
     jub_submision_finished = false
@@ -193,14 +219,14 @@ function trim_polyA_from_files(
     debug = true
 
     #Counters for specific pairs
-    ct_all = convert(SharedArray, zeros(Int64, nworkers()))
-    ct_pair_without_polyA = convert(SharedArray, zeros(Int64, nworkers()))
-    ct_pair_with_proper_polyA = convert(SharedArray, zeros(Int64, nworkers()))
-    ct_pair_with_discarded_polyA = convert(SharedArray, zeros(Int64, nworkers()))
-    ct_output_chunks = convert(SharedArray, zeros(Int64, nworkers()))
+    ct_all = convert(SharedArray, zeros(Int64, nworkers()-1))
+    ct_pair_without_polyA = convert(SharedArray, zeros(Int64, nworkers()-1))
+    ct_pair_with_proper_polyA = convert(SharedArray, zeros(Int64, nworkers()-1))
+    ct_pair_with_discarded_polyA = convert(SharedArray, zeros(Int64, nworkers()-1))
+    ct_output_chunks = convert(SharedArray, zeros(Int64, nworkers()-1))
     # a special counter to check that a worker has fnished processing its chink of data.
     # value 1 marks that it has finished
-    ct_finished = convert(SharedArray, zeros(Int64, nworkers()))
+    ct_finished = convert(SharedArray, zeros(Int64, nworkers()-1))
 
     min_l = Int64(minimum_polyA_length / 2)
     re = Regex("(A+[GTC])?(A{$min_l,})([GTC]A+)?")
@@ -208,8 +234,7 @@ function trim_polyA_from_files(
     const fastqo_1_2_s_d = RemoteChannel(()->Channel{Tuple{String,String,String,String} }(100));
 
     @everywhere function trim_polyA_from_fastq_pair_pararell(
-            r1_pipe_prefix::String,
-            r2_pipe_prefix::String,
+            input_channel::RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},
             fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
             ct_all::SharedArray{Int64,1},
             ct_pair_without_polyA::SharedArray{Int64,1},
@@ -231,8 +256,6 @@ function trim_polyA_from_files(
             )
 
             #input streams for r1 and r2
-            r1_input_b = open(r1_pipe_prefix*"_"*string(myid()-1),"r")
-            r2_input_b = open(r2_pipe_prefix*"_"*string(myid()-1),"r")
             # initialise buffers for collect of processed reads
             fastq1_b = IOBuffer()
             fastq2_b = IOBuffer()
@@ -241,7 +264,12 @@ function trim_polyA_from_files(
             #counrer for processed fastq entries per a process
             ct_local = 0
 
-            for (fastq1, fastq2) in zip(FASTQ.Reader(r1_input_b),FASTQ.Reader(r2_input_b))
+            #initial read in
+            fastq1_4l, fastq2_4l = take!(input_channel)
+
+            while !(fastq1_4l[1][1]=="END")
+                fastq1 = FASTQ.Record(join(fastq1_4l,'\n')*'\n')
+                fastq2 = FASTQ.Record(join(fastq2_4l,'\n')*'\n')
                 ct_local += 1
                 ct_all[(myid()-1)] += 1
                 has_proper_polyA = false
@@ -323,6 +351,8 @@ function trim_polyA_from_files(
                     fastq_d_b = IOBuffer()
                     ct_output_chunks[(myid()-1)] += 1
                 end
+                #read next pair
+                fastq1_4l, fastq2_4l = take!(input_channel)
             end
         #put to output pipe the final fraction
         fastq1_b_s = String(fastq1_b)
@@ -340,16 +370,13 @@ function trim_polyA_from_files(
         close(fastq_s_b)
         close(fastq_d_b)
         #close input buffers
-        close(r1_input_b)
-        close(r2_input_b)
         ct_finished[(myid()-1)] = 1
         ct_output_chunks[(myid()-1)] += 1
     end
 
-    for p in workers() # start tasks on the workers to process requests in parallel
+    for p in workers()[1:end-1] # start tasks on the workers to process requests in parallel
               @async remote_do(trim_polyA_from_fastq_pair_pararell, p,
-                                              r1_pipe_prefix,
-                                              r2_pipe_prefix,
+                                              input_channels[p-1],
                                               fastqo_1_2_s_d,
                                               ct_all,
                                               ct_pair_without_polyA,
@@ -372,7 +399,7 @@ function trim_polyA_from_files(
     jub_submision_finished = true
     println(STDERR, "Started analysis with $number_of_workers julia processes ")
 
-    #writing out files
+
     function write_from_pipe(
         fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
         ct_output_chunks::SharedArray{Int64,1},
@@ -507,12 +534,13 @@ function main(args)
                                                  #= use parsed_args["foo_bar"] =#
     #Parse reference file and collect prefixes of naturally occuring polyA prefixes
 
-    addprocs(parsed_args["processes"])
+    addprocs(parsed_args["processes"]+1)
     # Load modeules in the workers
     eval(macroexpand(quote @everywhere using BioSequences end))
     eval(macroexpand(quote @everywhere using CodecZlib end))
     eval(macroexpand(quote @everywhere using BufferedStreams end))
     eval(macroexpand(quote @everywhere using FMIndexes end))
+    eval(macroexpand(quote @everywhere using IterTools end))
     eval(macroexpand(quote @everywhere push!(LOAD_PATH, ".") end))
     eval(macroexpand(quote @everywhere using PolyAAnalysis end))
 

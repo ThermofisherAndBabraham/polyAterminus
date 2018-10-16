@@ -67,7 +67,6 @@ You can install  the dependencies manually or through conda environment as indic
 * `threads_star`: max as you wish.
 * `SCRATCH`: location of tmp directory for faster computation (SSD).
 * `REFERENCE`: genome in fasta format.
-* `polyA_ref`: polyA reference for `bbduk` trimmer.
 * `GFF3` and `GTF`: should be the same version.
 
 * If you want to normalize all samples by lowest read number found:
