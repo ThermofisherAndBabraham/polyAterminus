@@ -114,10 +114,10 @@ Arguments:
     `buffer_size::Int64`: channel capacities
 
 """
-function create_input_channels(number_of_workers::Int64,buffer_size::Int64)::Array{RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},1}
-    output=Array{RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},1}()
+function create_input_channels(number_of_workers::Int64,buffer_size::Int64)::Array{RemoteChannel{Channel{NTuple{2,String}}},1}
+    output=Array{RemoteChannel{Channel{NTuple{2,String}}},1}()
     for i in range(1,number_of_workers)
-        push!(output, RemoteChannel(()->Channel{Tuple{NTuple{4,String},NTuple{4,String}}}(buffer_size),i+1))
+        push!(output, RemoteChannel(()->Channel{NTuple{2,String}}(buffer_size),i+1))
     end
     return output
 end
@@ -172,10 +172,10 @@ function trim_polyA_from_files(
     )
 
     #Create input streams
-    input_channels = create_input_channels(number_of_workers,1)
+    input_channels = create_input_channels(number_of_workers,10000)
     #start reading and filling in input channels
     #@schedule fill_input_channels(fastq1,fastq2,input_channels)
-    @everywhere function fill_input_channels(r1::String,r2::String, input_channels::Array{RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},1})
+    @everywhere function fill_input_channels(r1::String,r2::String, input_channels::Array{RemoteChannel{Channel{NTuple{2,String}}},1})
         number_of_workers=length(input_channels)
         r1_filename = basename(r1)
         r2_filename = basename(r2)
@@ -193,17 +193,19 @@ function trim_polyA_from_files(
         r2_part = ""
 
         ct_all = 0
-        for part in partition(zip(partition(eachline(f1_file),4),partition(eachline(f2_file),4)),10)
+        for part in partition(zip(partition(eachline(f1_file, chomp = false),4),partition(eachline(f2_file, chomp=false),4)),10)
             # push outputs in  chunks
             @sync for chunks_for_channels in partition(part,number_of_workers)
                 for (input_channel,chunk_for_channel) in zip(input_channels,chunks_for_channels)
-                    @async put!(input_channel,chunk_for_channel)
+                    fastq1_4l=chunk_for_channel[1][1]*chunk_for_channel[1][2]*chunk_for_channel[1][3]*chunk_for_channel[1][4]
+                    fastq2_4l=chunk_for_channel[2][1]*chunk_for_channel[2][2]*chunk_for_channel[2][3]*chunk_for_channel[2][4]
+                    @async put!(input_channel,(fastq1_4l,fastq2_4l))
                 end
             end
         end
         for i in 1:number_of_workers
             #Marks end of file reading
-            put!(input_channels[i],(("END","","",""),("END","","","")))
+            put!(input_channels[i],("END","END"))
         end
         close(f1_file)
         close(f2_file)
@@ -234,7 +236,7 @@ function trim_polyA_from_files(
     const fastqo_1_2_s_d = RemoteChannel(()->Channel{Tuple{String,String,String,String} }(100));
 
     @everywhere function trim_polyA_from_fastq_pair_pararell(
-            input_channel::RemoteChannel{Channel{Tuple{NTuple{4,String},NTuple{4,String}}}},
+            input_channel::RemoteChannel{Channel{NTuple{2,String}}},
             fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
             ct_all::SharedArray{Int64,1},
             ct_pair_without_polyA::SharedArray{Int64,1},
@@ -267,9 +269,9 @@ function trim_polyA_from_files(
             #initial read in
             fastq1_4l, fastq2_4l = take!(input_channel)
 
-            while !(fastq1_4l[1][1]=="END")
-                fastq1 = FASTQ.Record(join(fastq1_4l,'\n')*'\n')
-                fastq2 = FASTQ.Record(join(fastq2_4l,'\n')*'\n')
+            while !(fastq1_4l=="END")
+                fastq1 = FASTQ.Record(fastq1_4l)
+                fastq2 = FASTQ.Record(fastq2_4l)
                 ct_local += 1
                 ct_all[(myid()-1)] += 1
                 has_proper_polyA = false
