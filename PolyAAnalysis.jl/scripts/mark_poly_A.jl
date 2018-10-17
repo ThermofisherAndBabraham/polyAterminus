@@ -205,6 +205,7 @@ function trim_polyA_from_files(
     # a special counter to check that a worker has fnished processing its chink of data.
     # value 1 marks that it has finished
     ct_finished = convert(SharedArray, zeros(Int64, nworkers()))
+    ct_submited =  convert(SharedArray, zeros(Int64, 1)) # marks finishing of submision for analysis processes
 
     min_l = Int64(minimum_polyA_length / 2)
     re = Regex("(A+[GTC])?(A{$min_l,})([GTC]A+)?")
@@ -215,6 +216,7 @@ function trim_polyA_from_files(
         fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
         ct_output_chunks::SharedArray{Int64,1},
         ct_outputed_chunks::SharedArray{Int64,1},
+        ct_submited::SharedArray{Int64,1},
         ct_finished::SharedArray{Int64,1},
         output_prefix::String)
 
@@ -232,36 +234,41 @@ function trim_polyA_from_files(
 
         number_of_workers = length(ct_finished)
 
-        while true
+        while (!(sum(ct_finished) == number_of_workers) || ct_submited[1] == 0 ||  (ct_submited[1] > ct_outputed_chunks[1] + 1 ) || (sum(ct_output_chunks) == 0))
             fastqo1_s,fastqo2_s,fastqo_s_s,fastqo_d_s = take!(fastqo_1_2_s_d)
             ctout += 1
             write(fastqo1,fastqo1_s)
             write(fastqo2,fastqo2_s)
             write(fastqo_s,fastqo_s_s)
             write(fastqo_d,fastqo_d_s)
+            ct_outputed_chunks[1] = ctout -1 # one will be added after final write out
 
-            if sum(ct_finished) == number_of_workers && ctout == sum(ct_output_chunks)
-                break
-            end
+
         end
+
+        println("__________________________________FINISHED", " ",sum(ct_output_chunks) ," ", ct_outputed_chunks[1])
 
         close(fastqo1)
         close(fastqo2)
         close(fastqo_s)
         close(fastqo_d)
-        ct_outputed_chunks[1] = 1
+        ct_outputed_chunks[1] += 1 #marks final write out
     end
 
     @schedule write_from_pipe(
         fastqo_1_2_s_d,
         ct_output_chunks,
         ct_outputed_chunks,
+        ct_submited,
         ct_finished,
         output_prefix)
 
     #setup run monitoring
     function monitor(
             ct_finished::SharedArray{Int64,1},
+            ct_output_chunks::SharedArray{Int64,1},
+            ct_outputed_chunks::SharedArray{Int64,1},
+            ct_submited::SharedArray{Int64,1},
             ct_pair_without_polyA::SharedArray{Int64,1},
             ct_pair_with_proper_polyA::SharedArray{Int64,1},
             ct_pair_with_discarded_polyA::SharedArray{Int64,1})
@@ -273,8 +280,10 @@ function trim_polyA_from_files(
         end_time = now()
         start_time = now()
 
-        while  sum(ct_finished) < number_of_workers #!((ctout == sum(ct_all)) & jub_submision_finished) || ((ctout==0) && (sum(ct_all)==0))# print out results
+
+        while  !(sum(ct_finished) == number_of_workers) ||  (sum(ct_output_chunks) > ct_outputed_chunks[1]) || (sum(ct_output_chunks) == 0) #!((ctout == sum(ct_all)) & jub_submision_finished) || ((ctout==0) && (sum(ct_all)==0))# print out results
                 sleep(sleep_time)
+                println(sum(ct_output_chunks), " ",ct_outputed_chunks[1]," ",ct_finished," ",ct_submited)
                 old_finished = finished
                 finished = sum(ct_all)
                 end_time = now()
@@ -289,7 +298,8 @@ function trim_polyA_from_files(
                 print(STDERR, "Currently parsed reads: ",finished," ; ","at speed $speed read pairs/s ; ",
                 " without polyA: ",sum(ct_pair_without_polyA)," ; ",
                 " with proper polyA: ",sum(ct_pair_with_proper_polyA)," ; ",
-                " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
+                " with discarded polyA: ",sum(ct_pair_with_discarded_polyA)," ; ",
+                " output chunks: ",sum(ct_outputed_chunks),"\r")
         end
 
 
@@ -305,6 +315,9 @@ function trim_polyA_from_files(
 
     @schedule monitor(
     ct_finished,
+    ct_output_chunks,
+    ct_outputed_chunks,
+    ct_submited,
     ct_pair_without_polyA,
     ct_pair_with_proper_polyA,
     ct_pair_with_discarded_polyA
@@ -331,11 +344,11 @@ function trim_polyA_from_files(
             re::Regex;
             debug_id="None",
             debug=false,
-            buffer_size=10000
             )
 
-            #input streams for r1 and r2
-            # initialise buffers for collect of processed reads
+            # mark that task is not finished on this process
+            ct_finished[(myid()-1)] = 0
+            # initialise buffers for collect of processed read
             fastq1_b = IOBuffer()
             fastq2_b = IOBuffer()
             fastq_s_b = IOBuffer()
@@ -404,31 +417,6 @@ function trim_polyA_from_files(
                     end
                 end
                 #write out
-
-                if ct_local == buffer_size
-                    #put colected data to output pipe
-                    ct_local = 0
-                    fastq1_b_s = String(fastq1_b)
-                    fastq2_b_s = String(fastq2_b)
-                    fastq_s_b_s = String(fastq_s_b)
-                    fastq_d_b_s = String(fastq_d_b)
-
-                    if fastq1_b_s != ""   fastq1_b_z=String(transcode(GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
-                    if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
-                    if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
-                    if fastq_d_b_s != ""   fastq_d_b_z=String(transcode(GzipCompressor,fastq_d_b_s)) else fastq_d_b_z="" end
-
-                    put!(fastqo_1_2_s_d,(fastq1_b_z,fastq2_b_z,fastq_s_b_z,fastq_d_b_z))
-                    close(fastq1_b)
-                    close(fastq2_b)
-                    close(fastq_s_b)
-                    close(fastq_d_b)
-                    fastq1_b = IOBuffer()
-                    fastq2_b = IOBuffer()
-                    fastq_s_b = IOBuffer()
-                    fastq_d_b = IOBuffer()
-                    ct_output_chunks[(myid()-1)] += 1
-                end
             end
         #put to output pipe the final fraction
         fastq1_b_s = String(fastq1_b)
@@ -440,6 +428,7 @@ function trim_polyA_from_files(
         if fastq2_b_s != ""   fastq2_b_z=String(transcode(GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
         if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
         if fastq_d_b_s != ""   fastq_d_b_z=String(transcode(GzipCompressor,fastq_d_b_s)) else fastq_d_b_z="" end
+        ct_output_chunks[(myid()-1)] += 1
         put!(fastqo_1_2_s_d,(fastq1_b_z,fastq2_b_z,fastq_s_b_z,fastq_d_b_z))
         close(fastq1_b)
         close(fastq2_b)
@@ -447,7 +436,7 @@ function trim_polyA_from_files(
         close(fastq_d_b)
         #close input buffers
         ct_finished[(myid()-1)] = 1
-        ct_output_chunks[(myid()-1)] += 1
+
     end
 
 
@@ -455,13 +444,15 @@ function trim_polyA_from_files(
     ct_partition = 0
     ct_reads = 0
     chunk = Array{Tuple{NTuple{4,String},NTuple{4,String}},1}()
+    ct_chunks = 0
     worker_nr=1
     for part in zip(partition(eachline(f1_file, chomp = false),4),partition(eachline(f2_file, chomp=false),4))
         push!(chunk,part)
         ct_partition += 1
         ct_reads += 1
         if ct_partition == chunk_size
-            remote_do(trim_polyA_from_fastq_pair_pararell, worker_nr+1,
+             ct_chunks  += 1
+             remote_do(trim_polyA_from_fastq_pair_pararell, worker_nr+1,
                                             chunk,
                                             fastqo_1_2_s_d,
                                             ct_all,
@@ -488,8 +479,10 @@ function trim_polyA_from_files(
             chunk = Array{Tuple{NTuple{4,String},NTuple{4,String}},1}()
             ct_partition = 0
         end
+
     end
     # final chunk analysis
+    ct_chunks  += 1
     remote_do(trim_polyA_from_fastq_pair_pararell, worker_nr+1,
                                     chunk,
                                     fastqo_1_2_s_d,
@@ -510,8 +503,9 @@ function trim_polyA_from_files(
                                     debug=debug,
                                     debug_id=debug_id
                                     )
-    println(STDERR, "Submited for analysis $ct_reads reads")
-    while ! (ct_outputed_chunks[1] == 1)
+    println(STDERR, "Submited for analysis $ct_reads reads in $ct_chunks chunks")
+    ct_submited[1] = ct_chunks
+    while t_chunks) == 0)
         sleep(1)
     end
     println("Analysis finished")
