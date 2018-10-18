@@ -128,19 +128,19 @@ end
 
 
 """
-    check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
+    check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
 
     Check if the read is in pefixes list of naturall polyA sreches.
 
     # Arguments
     - `fqo_trimmed::FASTQ.Record,`: fastq record.
-    - `prefixes::FMIndexes.FMIndex{7,UInt32}`: array of natural prefixes.
+    - `prefixes::FMIndexes.FMIndex{7,}`: array of natural prefixes.
     - `maximum_distance_with_prefix_database::Int64`: maximum Levenstain distance.
     - `minimum_not_polyA::Int64`: Minimum of polyA lenght.
 """
 function check_polyA_prefixes(
     fqo_trimmed::FASTQ.Record,
-    prefixes::FMIndexes.FMIndex{7,UInt32},
+    prefixes::FMIndexes.FMIndex{7,},
     maximum_distance_with_prefix_database::Int64,
     minimum_not_polyA::Int64
     )::Bool
@@ -416,14 +416,14 @@ end
 
 
 """
-    trim_polyA_from_fastq_pair(fastq1::FASTQ.Record,fastq2::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64,maximum_distance_with_prefix_database::Int64,minimum_poly_A_between::Int64)
+    trim_polyA_from_fastq_pair(fastq1::FASTQ.Record,fastq2::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,},minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64,maximum_distance_with_prefix_database::Int64,minimum_poly_A_between::Int64)
 
     Finds and trims polyA having reads from a pair of fastq records
 
     # Arguments
     - `fastq1::FASTQ.Record`: FASTQ record
     - `fastq2::FASTQ.Record`: FASTQ record
-    - `prefixes::FMIndexes.FMIndex{7,UInt32}`: array of prefixes of natural polyA
+    - `prefixes::FMIndexes.FMIndex{7,}`: array of prefixes of natural polyA
     - `minimum_not_polyA::Int64`: minimum length of not polyA strech in a read
     - `minimum_polyA_length::Int64`: minimum length of polyA strech
     - `maximum_non_A_symbols::Int64`: maximum numer of nonA symbols in polyA strech
@@ -433,7 +433,7 @@ end
 function trim_polyA_from_fastq_pair(
     fastq1::FASTQ.Record,
     fastq2::FASTQ.Record,
-    prefixes::FMIndexes.FMIndex{7,UInt32},
+    prefixes::FMIndexes.FMIndex{7,},
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,

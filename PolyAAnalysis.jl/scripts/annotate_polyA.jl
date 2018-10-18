@@ -4,7 +4,8 @@ using ArgParse.ArgParseSettings
 using ArgParse.@add_arg_table
 using ArgParse.parse_args
 
-push!(LOAD_PATH, ".")
+NEW_PATH=join(split(Base.source_path(),"/")[1:end-3],"/")
+push!(LOAD_PATH, NEW_PATH)
 using PolyAAnalysis
 
 function main(args)
