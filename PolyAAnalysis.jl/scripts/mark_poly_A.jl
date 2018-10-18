@@ -102,11 +102,6 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     return index
 end
 
-
-
-
-
-
 function write_from_pipe(
     fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
     ct_output_chunks::SharedArray{Int64,1},
@@ -170,7 +165,6 @@ function monitor(
     end_time = now()
     start_time = now()
 
-
     while  (ct_submited[1]  < sum(ct_outputed_chunks)) || (sum(ct_outputed_chunks) == 0)
             sleep(sleep_time)
             old_finished = finished
@@ -233,7 +227,6 @@ function trim_polyA_from_files(
     include_polyA::Bool;
     )
 
-
     # Setup exraction named pipe
     r1_filename = basename(fastq1)
     r2_filename = basename(fastq2)
@@ -246,10 +239,6 @@ function trim_polyA_from_files(
     run(`bash -c $cmd2`)
     f1_file = open(r1_filename_tmp_prefix_ini,"r")
     f2_file = open(r2_filename_tmp_prefix_ini,"r")
-
-
-
-
 
     #prepare counters for monitoring of execution
     #counter for jobs
@@ -301,10 +290,7 @@ function trim_polyA_from_files(
 
     #setup run monitoring
 
-
     println(STDERR,"Prefix $output_prefix will be used for output")
-
-
 
     chunk_size = 10000
     ct_partition = 0
@@ -378,9 +364,7 @@ function trim_polyA_from_files(
     end
     println("Analysis finished")
 
-
 end
-
 
 function main(args)
 
