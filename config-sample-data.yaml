@@ -4,13 +4,13 @@
 
 
 ########################################
-# Destination of FASTQ.GZ files.       #
+# Source of FASTQ.GZ files.       #
 # Should be .fq.gz or .fastq.gz files. #
 ########################################
 
-INPUT-DIR: /media/root/ocean/Databases/TestData/3EndD_testing_files/fastq #/media/root/ngs_nas3/testing_data_poly_A/
-TMP-DIR: tmp
-OUT-DIR: output
+INPUT-DIR: datasets/small_dataset/small_fastqs
+TMP-DIR: tmp_small_dataset
+OUT-DIR: output_small_dataset
 SCRATCH: tmp
 
 #########################
@@ -24,14 +24,10 @@ MACHINE:
 ##############
 # References #
 ##############
-REFERENCE: /media/root/ocean/Databases/TestData/3EndD_testing_files/reference/GRCh38.primary_assembly.chr21.fa
-polyA_ref: datasets/bbmap/polyA.fa
-# TRANSCRIPTS: /media/root/ocean/Databases/3EndD_testing_files/reference/gencode.v28.transcripts.chr21.fa.gz
-# GFF3: /media/root/ocean/Databases/3EndD_testing_files/reference/gencode.v28.primary_assembly.annotation_chr21.gff3
-# GTF: /media/root/ocean/Databases/3EndD_testing_files/reference/gencode.v28.primary_assembly.annotation_chr21.gtf
-TRANSCRIPTS: /media/root/ocean/Databases/TestData/3EndD_testing_files/reference/gencode.v28.transcripts.chr21.fa.gz
-GFF3: /media/root/ocean/Databases/TestData/3EndD_testing_files/reference/gencode.v28.primary_assembly.annotation_chr21.gff3
-GTF: /media/root/ocean/Databases/TestData/3EndD_testing_files/reference/gencode.v28.primary_assembly.annotation_chr21.gtf
+REFERENCE: datasets/small_dataset/references/GRCh38.primary_assembly.chr21.fa
+TRANSCRIPTS:
+GFF3: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gff3
+GTF: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gtf
 ###################
 # Fastqc options. #
 ###################

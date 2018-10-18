@@ -546,7 +546,7 @@ function trim_polyA_from_fastq_pair_pararell(
         ct_pair_with_discarded_polyA::SharedArray{Int64,1},
         ct_finished::SharedArray{Int64,1},
         ct_output_chunks::SharedArray{Int64,1},
-        prefixes::FMIndexes.FMIndex{7,UInt32},
+        prefixes::FMIndexes.FMIndex{7,},
         minimum_not_polyA::Int64,
         minimum_polyA_length::Int64,
         maximum_non_A_symbols::Int64,
