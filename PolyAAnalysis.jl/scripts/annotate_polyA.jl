@@ -72,7 +72,7 @@ function main(args)
     cluster = parsed_args["cluster"]
     verbose = parsed_args["verbose"]
 
-    if parsed_args["k"] == 0:
+    if parsed_args["k"] == 0
         cluter = false
     end
 
