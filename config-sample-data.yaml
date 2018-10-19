@@ -11,7 +11,7 @@
 INPUT-DIR: datasets/small_dataset/small_fastqs
 TMP-DIR: tmp_small_dataset
 OUT-DIR: output_small_dataset
-SCRATCH: tmp
+SCRATCH: tmp_small_dataset
 
 #########################
 # CPU and memory params #
