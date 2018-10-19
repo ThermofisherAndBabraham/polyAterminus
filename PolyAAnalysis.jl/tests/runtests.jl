@@ -5,6 +5,7 @@ using Base.Test
 NEW_PATH=join(split(Base.source_path(),"/")[1:end-3],"/")
 push!(LOAD_PATH, NEW_PATH)
 using DataFrames
+using DataStructures
 import GenomicFeatures: GFF3
 import GenomicFeatures: Interval
 import GenomicFeatures: Strand

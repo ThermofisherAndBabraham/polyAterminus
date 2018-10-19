@@ -41,6 +41,7 @@ please directly to the step 6 of the Workflow setup.
     conda config --add channels anaconda
     conda config --add channels defaults
 ```
+
 2. Create your `conda` environment:
  ```bash
     conda env create -f envs/3EndD.yaml -n 3EndD
@@ -81,13 +82,3 @@ please directly to the step 6 of the Workflow setup.
 `SUBSAMPLING:`
     `run: true`
     `subsample_to: N`
-
-## TODO
-
-- [x]  `output`: should be correct output for all necessary files.
-- [x]  `environment`: all applications should be added.
-- [x]  Tests for `MapPolyA.jl`
-- [x]  Check strands after parsing Bam in `MapPolyA.jl`
-- [x]  Test `rmdups()` in `MapPolyA.jl`
-- [ ]  Align all rule names and code.
-- [ ]  Add documentation.
