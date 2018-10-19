@@ -35,7 +35,7 @@ please directly to the step 6 of the Workflow setup.
 ```
 
 3. Add channels to conda:
-```bashr
+```bash
     conda config --add channels conda-forge
     conda config --add channels bioconda
     conda config --add channels anaconda
