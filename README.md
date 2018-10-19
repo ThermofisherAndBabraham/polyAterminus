@@ -61,7 +61,7 @@ please directly to the step 6 of the Workflow setup.
 
 * Run `snakemake`:
 ```bash
-    snakemake config.yaml -j 24 -k -p
+    snakemake --configfile config.yaml -j 24 -k -p
 ```
 
 
