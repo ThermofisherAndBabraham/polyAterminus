@@ -1,6 +1,9 @@
 ## Description
 
-Purpose of the work flow is to run RNA-seq trimming and alignment to a given reference steps and perform initial polyadenylation sites' analysis.
+Purpose of the work flow is to run RNA-seq trimming and alignment to a given
+reference steps and perform initial polyadenylation sites analysis.
+
+## [Documentation](https://polya-terminus.s3-eu-central-1.amazonaws.com/index.html)
 
 ## Dependencies
 
@@ -12,7 +15,9 @@ Purpose of the work flow is to run RNA-seq trimming and alignment to a given ref
 * `sambamba 0.6.6`
 
 
-You can install  the dependencies manually or through conda environment as indicated below. If you choose to install the required software  manually please directly to the step 6 of the Workflow setup.
+You can install  the dependencies manually or through conda environment as
+indicated below. If you choose to install the required software  manually
+please directly to the step 6 of the Workflow setup.
 
 ## Workflow setup
 
@@ -36,6 +41,7 @@ You can install  the dependencies manually or through conda environment as indic
     conda config --add channels anaconda
     conda config --add channels defaults
 ```
+
 2. Create your `conda` environment:
  ```bash
     conda env create -f envs/3EndD.yaml -n 3EndD
