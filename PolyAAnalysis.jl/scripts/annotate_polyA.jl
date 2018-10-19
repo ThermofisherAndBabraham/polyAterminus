@@ -73,7 +73,7 @@ function main(args)
     verbose = parsed_args["verbose"]
 
     if parsed_args["k"] == 0
-        cluter = false
+        cluster = false
     end
 
     tic()
