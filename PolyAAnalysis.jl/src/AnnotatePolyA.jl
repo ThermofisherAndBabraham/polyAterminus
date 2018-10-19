@@ -367,7 +367,7 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
             recenter!(d1, d1[new_cluster_id], new_cluster_id, k, chr, str; verbose=verbose)
             @goto stop_recenter!
         else
-            recenter(d1, d1[near_center], near_center, k, chr, str; verbose=verbose)
+            recenter!(d1, d1[near_center], near_center, k, chr, str; verbose=verbose)
             @goto stop_recenter!
         end
     end
