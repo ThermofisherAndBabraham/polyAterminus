@@ -153,8 +153,8 @@ rule trim_adapters:
         input_dir + "/{stem}_R2_001.fastq.gz"
     output:
         logs + "/BBDUK/{stem}_contamination.log",
-        temp(tmp + "/{stem}_R1_001Trimmed.fastq.gz"),
-        temp(tmp + "/{stem}_R2_001Trimmed.fastq.gz")
+        tmp + "/{stem}_R1_001Trimmed.fastq.gz",
+        tmp + "/{stem}_R2_001Trimmed.fastq.gz"
     log:
         logs + "/BBDUK/{stem}_trimming.log"
     params:
@@ -275,8 +275,8 @@ else:
         threads:
             1
         shell:
-            "cp {input[0]}  {output[0]}; " +
-            "cp {input[1]} {output[1]}"
+            "ln -sr {input[0]}  {output[0]}; " +
+            "ln -sr {input[1]} {output[1]}"
 
 
 # ------------------------ analysis of 3' coverages -------------------------- #
@@ -459,8 +459,10 @@ rule annotate_polyA:
         julia_threads
     params:
         gff = gff,
-        pref = out + "/ANNOTATE-POLYA/{stem}"
+        pref = out + "/ANNOTATE-POLYA/{stem}",
+        k = config["ANNOTATE-TS"]["k"],
+        add_params = config["ANNOTATE-TS"]["additional_params"]
     shell:
         "export JULIA_NUM_THREADS={threads}; julia --depwarn=no " +
         "PolyAAnalysis.jl/scripts/annotate_polyA.jl -b {input} -o {params.pref} " +
-        "-g {params.gff} &> {log}"
+        "-g {params.gff} -k {params.k} {params.add_params} &> {log}"

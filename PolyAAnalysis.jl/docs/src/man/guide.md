@@ -78,7 +78,8 @@ PolyAAnalysis is designed to find and annotate polyA sites.
             -c -g {reference.fasta}
    ```
 
-After trimming reads should be aligned to the reference using `STAR` for example.
+After trimming reads should be aligned to the reference using `STAR` for example
+and sorted.
 
 ### Annotating polyA sites.
 
@@ -90,3 +91,16 @@ After trimming reads should be aligned to the reference using `STAR` for example
            -g {reference.gff3}
            -s {strandness}
    ```
+2. To cluster and annotate detected polyA sites run:
+   ```bash
+     julia --depwarn=no PolyAAnalysis.jl/scripts/annotate_polyA.jl
+           -b {input}
+           -o {output_prefix}
+           -g {reference.gff3}
+           -s {strandness}
+           -c {cluster}
+           -k {k}
+   ```
+Where `k` parameter is distance from cluster centre allowed. With `k=0` no
+clustering is done. Clustering is based on centre value which is
+either most frequent termination site or if frequencies are equal central value.
