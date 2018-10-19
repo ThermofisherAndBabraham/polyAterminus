@@ -2,7 +2,8 @@ module TestPolyAAnalsis
 
 using BioSequences
 using Base.Test
-push!(LOAD_PATH, "../../")
+NEW_PATH=join(split(Base.source_path(),"/")[1:end-3],"/")
+push!(LOAD_PATH, NEW_PATH)
 using DataFrames
 using DataStructures
 import GenomicFeatures: GFF3

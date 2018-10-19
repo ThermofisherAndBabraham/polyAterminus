@@ -128,19 +128,19 @@ end
 
 
 """
-    check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
+    check_polyA_prefixes(fqo_trimmed::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,},maximum_distance_with_prefix_database::Int64,minimum_not_polyA::Int64)
 
     Check if the read is in pefixes list of naturall polyA sreches.
 
     # Arguments
     - `fqo_trimmed::FASTQ.Record,`: fastq record.
-    - `prefixes::FMIndexes.FMIndex{7,UInt32}`: array of natural prefixes.
+    - `prefixes::FMIndexes.FMIndex{7,}`: array of natural prefixes.
     - `maximum_distance_with_prefix_database::Int64`: maximum Levenstain distance.
     - `minimum_not_polyA::Int64`: Minimum of polyA lenght.
 """
 function check_polyA_prefixes(
     fqo_trimmed::FASTQ.Record,
-    prefixes::FMIndexes.FMIndex{7,UInt32},
+    prefixes::FMIndexes.FMIndex{7,},
     maximum_distance_with_prefix_database::Int64,
     minimum_not_polyA::Int64
     )::Bool
@@ -416,14 +416,14 @@ end
 
 
 """
-    trim_polyA_from_fastq_pair(fastq1::FASTQ.Record,fastq2::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,UInt32},minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64,maximum_distance_with_prefix_database::Int64,minimum_poly_A_between::Int64)
+    trim_polyA_from_fastq_pair(fastq1::FASTQ.Record,fastq2::FASTQ.Record,prefixes::FMIndexes.FMIndex{7,},minimum_not_polyA::Int64,minimum_polyA_length::Int64,maximum_non_A_symbols::Int64,maximum_distance_with_prefix_database::Int64,minimum_poly_A_between::Int64)
 
     Finds and trims polyA having reads from a pair of fastq records
 
     # Arguments
     - `fastq1::FASTQ.Record`: FASTQ record
     - `fastq2::FASTQ.Record`: FASTQ record
-    - `prefixes::FMIndexes.FMIndex{7,UInt32}`: array of prefixes of natural polyA
+    - `prefixes::FMIndexes.FMIndex{7,}`: array of prefixes of natural polyA
     - `minimum_not_polyA::Int64`: minimum length of not polyA strech in a read
     - `minimum_polyA_length::Int64`: minimum length of polyA strech
     - `maximum_non_A_symbols::Int64`: maximum numer of nonA symbols in polyA strech
@@ -433,7 +433,7 @@ end
 function trim_polyA_from_fastq_pair(
     fastq1::FASTQ.Record,
     fastq2::FASTQ.Record,
-    prefixes::FMIndexes.FMIndex{7,UInt32},
+    prefixes::FMIndexes.FMIndex{7,},
     minimum_not_polyA::Int64,
     minimum_polyA_length::Int64,
     maximum_non_A_symbols::Int64,
@@ -535,56 +535,118 @@ function trim_polyA_from_fastq_pair(
     close(fastq_s_b)
     close(fastq_d_b)
     put!(fastqo_1_2_s_d,("a","b","c","d"))
-    # #initial filtering
-    #     if debug_id == FASTQ.identifier(fastq1)
-    #         debug=true
-    #     else
-    #         debug=false
-    #     end
-    #
-    # 	ct_all[(myid()-1)] += 1
-    #
-    #     fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
-    #                                                     fastq1,
-    #                                                     fastq2,
-    #                                                     prefixes,
-    #                                                     minimum_not_polyA,
-    #                                                     minimum_polyA_length,
-    #                                                     maximum_non_A_symbols,
-    #                                                     maximum_distance_with_prefix_database,
-    #                                                     minimum_poly_A_between,
-    #                                                     debug_id=debug_id,
-    #                                                     debug=debug
-    #                                                     )
-    #
-    #     if !polyA_detected
-    # 		ct_pair_without_polyA[(myid()-1)] += 1
-    #         println(fastq1_b,fastq1)
-    #         println(fastq2_b,fastq2)
-    #     else
-    #         a=1
-    #         # if has_proper_polyA
-    #         #     put!(fastqo_s,fqo_trimmed)
-    # 		# 	ct_pair_with_proper_polyA[(myid()-1)] += 1
-    #         #     #get reverse complement of the polyA read
-    #         #     if include_polyA
-    #         #         name=FASTQ.identifier(fqo_trimmed)
-    #         #         description=FASTQ.description(fqo_trimmed)
-    #         #         rev_quality=reverse(FASTQ.quality(fqo_trimmed))
-    #         #         rev_seq=reverse_complement!(FASTQ.sequence(fqo_trimmed))
-    #         #         fqo_trimmed_rev=FASTQ.Record(name, description, rev_seq, rev_quality)
-    # 		# 		println(fastqo12, (fqo_trimmed,fqo_trimmed_rev))
-    #         #     end
-    #         # else
-    #         #
-    #         #     put!(fastqo_d,fqo_trimmed)
-    # 		# 	ct_pair_with_discarded_polyA[(myid()-1)] += 1
-    #         # end
-    #     end
-    # 	if mod(sum(ct_all),1000)==0
-    # 		println(STDERR, "Parsed reads: ",sum(ct_all),
-    # 		" without polyA: ",sum(ct_pair_without_polyA),
-    # 		" with proper polyA: ",sum(ct_pair_with_proper_polyA),
-    # 		" with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\r")
-    # 	end
+end
+
+function trim_polyA_from_fastq_pair_pararell(
+        chunk_for_channels::Array{Tuple{NTuple{4,String},NTuple{4,String}},1},
+        fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}},
+        ct_all::SharedArray{Int64,1},
+        ct_pair_without_polyA::SharedArray{Int64,1},
+        ct_pair_with_proper_polyA::SharedArray{Int64,1},
+        ct_pair_with_discarded_polyA::SharedArray{Int64,1},
+        ct_finished::SharedArray{Int64,1},
+        ct_output_chunks::SharedArray{Int64,1},
+        prefixes::FMIndexes.FMIndex{7,},
+        minimum_not_polyA::Int64,
+        minimum_polyA_length::Int64,
+        maximum_non_A_symbols::Int64,
+        maximum_distance_with_prefix_database::Int64,
+        minimum_poly_A_between::Int64,
+        include_polyA::Bool,
+        re::Regex;
+        debug_id="None",
+        debug=false,
+        )
+
+        # mark that task is not finished on this process
+        ct_finished[(myid()-1)] = 0
+        # initialise buffers for collect of processed read
+        fastq1_b = IOBuffer()
+        fastq2_b = IOBuffer()
+        fastq_s_b = IOBuffer()
+        fastq_d_b = IOBuffer()
+        #counrer for processed fastq entries per a process
+        ct_local = 0
+
+        for chunk_for_channel in chunk_for_channels
+            fastq1_4l=chunk_for_channel[1][1]*chunk_for_channel[1][2]*chunk_for_channel[1][3]*chunk_for_channel[1][4]
+            fastq2_4l=chunk_for_channel[2][1]*chunk_for_channel[2][2]*chunk_for_channel[2][3]*chunk_for_channel[2][4]
+            fastq1 = FASTQ.Record(fastq1_4l)
+            fastq2 = FASTQ.Record(fastq2_4l)
+            ct_local += 1
+            ct_all[(myid()-1)] += 1
+            has_proper_polyA = false
+            polyA_detected = false
+
+            if debug_id == FASTQ.identifier(fastq1)
+                debug = true
+            else
+                debug = false
+            end
+            fqo_trimmed, has_proper_polyA, polyA_detected = trim_polyA_from_fastq_pair(
+                                                            fastq1,
+                                                            fastq2,
+                                                            prefixes,
+                                                            minimum_not_polyA,
+                                                            minimum_polyA_length,
+                                                            maximum_non_A_symbols,
+                                                            maximum_distance_with_prefix_database,
+                                                            minimum_poly_A_between,
+                                                            re,
+                                                            debug_id=debug_id,
+                                                            debug=debug
+                                                            )
+
+            if debug
+                println("trim_polyA_from_fastq_pair output for $debug_id")
+                println("fqo_trimmed:\n $fqo_trimmed \n, has_proper_polyA: $has_proper_polyA, polyA_detected: $polyA_detected")
+            end
+
+            if !polyA_detected
+                ct_pair_without_polyA[(myid()-1)] += 1
+                println(fastq1_b,fastq1)
+                println(fastq2_b,fastq2)
+            else
+                a = 1
+
+                if has_proper_polyA
+                    println(fastq_s_b,fqo_trimmed)
+                    ct_pair_with_proper_polyA[(myid()-1)] += 1
+                    #get reverse complement of the polyA read
+
+                    if include_polyA
+                        name = FASTQ.identifier(fqo_trimmed)
+                        description = FASTQ.description(fqo_trimmed)
+                        rev_quality = reverse(FASTQ.quality(fqo_trimmed))
+                        rev_seq = reverse_complement!(FASTQ.sequence(fqo_trimmed))
+                        fqo_trimmed_rev = FASTQ.Record(name, description, rev_seq, rev_quality)
+                        println(fastq1_b,fqo_trimmed)
+                        println(fastq2_b,fqo_trimmed_rev)
+                    end
+                else
+                    println(fastq_d_b,fastq1)
+                    ct_pair_with_discarded_polyA[(myid()-1)] += 1
+                end
+            end
+            #write out
+        end
+    #put to output pipe the final fraction
+    fastq1_b_s = String(fastq1_b)
+    fastq2_b_s = String(fastq2_b)
+    fastq_s_b_s = String(fastq_s_b)
+    fastq_d_b_s = String(fastq_d_b)
+
+    if fastq1_b_s != ""   fastq1_b_z=String(transcode(CodecZlib.GzipCompressor,fastq1_b_s)) else fastq1_b_z="" end
+    if fastq2_b_s != ""   fastq2_b_z=String(transcode(CodecZlib.GzipCompressor,fastq2_b_s)) else fastq2_b_z="" end
+    if fastq_s_b_s != ""   fastq_s_b_z=String(transcode(CodecZlib.GzipCompressor,fastq_s_b_s)) else fastq_s_b_z="" end
+    if fastq_d_b_s != ""   fastq_d_b_z=String(transcode(CodecZlib.GzipCompressor,fastq_d_b_s)) else fastq_d_b_z="" end
+    ct_output_chunks[(myid()-1)] += 1
+    put!(fastqo_1_2_s_d,(fastq1_b_z,fastq2_b_z,fastq_s_b_z,fastq_d_b_z))
+    close(fastq1_b)
+    close(fastq2_b)
+    close(fastq_s_b)
+    close(fastq_d_b)
+    #close input buffers
+    ct_finished[(myid()-1)] = 1
+
 end
