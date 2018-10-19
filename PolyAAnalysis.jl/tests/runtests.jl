@@ -4,6 +4,7 @@ using BioSequences
 using Base.Test
 push!(LOAD_PATH, "../../")
 using DataFrames
+using DataStructures
 import GenomicFeatures: GFF3
 import GenomicFeatures: Interval
 import GenomicFeatures: Strand

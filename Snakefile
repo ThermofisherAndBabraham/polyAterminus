@@ -459,8 +459,10 @@ rule annotate_polyA:
         julia_threads
     params:
         gff = gff,
-        pref = out + "/ANNOTATE-POLYA/{stem}"
+        pref = out + "/ANNOTATE-POLYA/{stem}",
+        k = config["ANNOTATE-TS"]["k"],
+        add_params = config["ANNOTATE-TS"]["additional_params"]
     shell:
         "export JULIA_NUM_THREADS={threads}; julia --depwarn=no " +
         "PolyAAnalysis.jl/scripts/annotate_polyA.jl -b {input} -o {params.pref} " +
-        "-g {params.gff} &> {log}"
+        "-g {params.gff} -k {params.k} {params.add_params} &> {log}"

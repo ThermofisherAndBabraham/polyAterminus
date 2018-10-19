@@ -67,3 +67,10 @@ MAPPING:
         threads: 24
         chimSegmentMin: 20
         additional_params: ""
+
+####################
+# Annotation of TS #
+####################
+ANNOTATE-TS:
+    k: 5
+    additional_params: "--cluster" # ["--cluster --verbose"]
