@@ -59,11 +59,10 @@ please directly to the step 6 of the Workflow setup.
 
 ## Analysis
 
-* Run `snakemake`:
-```bash
-    snakemake --configfile config.yaml -j 24 -k -p
+* Run `snakemake` like:
+```snakemake --configfile  config.yaml -j 24 -k -p
 ```
-
+This would ran an analysis on small dataset matching human brain RNA-seq data of 21th chromosome.
 
 ## Notes for analysis configuration `config.yaml`
 
@@ -82,3 +81,15 @@ please directly to the step 6 of the Workflow setup.
 `SUBSAMPLING:`
     `run: true`
     `subsample_to: N`
+
+## TODO
+
+- [x]  `output`: should be correct output for all necessary files.
+- [x]  `environment`: all applications should be added.
+- [x]  Tests for `MapPolyA.jl`
+- [x]  Check strands after parsing Bam in `MapPolyA.jl`
+- [x]  Test `rmdups()` in `MapPolyA.jl`
+- [x]  Add documentation.
+- [ ]  Approximate search against database of encoded polyA  stretch.
+- [ ]  Merging of R1 and R2 reads for more accurate determination of a polyA length.
+- [ ]  Speeding up the trimmer. Now with 8 processes ~ 40 minutes per sample (11 ml read pairs).

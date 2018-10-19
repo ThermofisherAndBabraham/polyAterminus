@@ -459,7 +459,7 @@ function trim_polyA_from_fastq_pair(
         println("used parameter: minimum_polyA_length $minimum_polyA_length, maximum_non_A_symbols $maximum_non_A_symbols")
     end
 
-    if detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols,re) &&
+    if  detect_polyA_in_a_string(seq_for_read,minimum_polyA_length,maximum_non_A_symbols,re) &&
         detect_polyA_in_a_string(revseq_rev_read,minimum_polyA_length,maximum_non_A_symbols,re)
             #tries sto esxtend polyA
             cosensus_extended_fwd_read=extend_poly_A(fastq1,fastq2)
@@ -478,7 +478,7 @@ function trim_polyA_from_fastq_pair(
             end
 
             #check if the read is in pefixes list of natural polyA streches
-            if has_proper_polyA
+            if has_proper_polyA  && (length(prefixes) != 1 )
                 has_proper_polyA = check_polyA_prefixes(fqo_trimmed,prefixes,maximum_distance_with_prefix_database,minimum_not_polyA)
 
                 if !has_proper_polyA
@@ -491,51 +491,6 @@ function trim_polyA_from_fastq_pair(
     return fqo_trimmed, has_proper_polyA, polyA_detected
 end
 
-
-"""
-    trim_polyA_from_fastq_pair
-
-    Finds and trims polyA having reads from a pair of fastq records
-
-    # Arguments
-    - `fastq_pairs::RemoteChannel`: channel with fastq sequences.
-    - `prefixes::Array{String,1}`: array of prefixes of natural polyA.
-    - `minimum_not_polyA::Int64`: minimum length of not polyA strech in a read.
-    - `minimum_polyA_length::Int64`: minimum length of polyA strech.
-    - `maximum_non_A_symbols::Int64`: maximum numer of nonA symbols in polyA strech.
-    - `maximum_distance_with_prefix_database::Int64`: allowed Levenshtein distance between prefix of natural polyA in transcripts and the read.
-    - `minimum_poly_A_between::Int64`: minimum length of polyA strech that might occure between non A symbols forming a fragment to be trimmed off (starting from the very 3' end).
-    - `include_polyA::Bool`: Includes output polyA sequences as pseudo pair end's  into output fastq.
-    - `fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}}`: channel for fastq out.
-"""
-function trim_polyA_from_fastq_pair(
-    fastq_pairs::RemoteChannel,
-    prefixes::Array{String,1},
-    minimum_not_polyA::Int64,
-    minimum_polyA_length::Int64,
-    maximum_non_A_symbols::Int64,
-    maximum_distance_with_prefix_database::Int64,
-    minimum_poly_A_between::Int64,
-    include_polyA::Bool,
-	ct_all::SharedArray,
-	ct_pair_without_polyA::SharedArray,
-	ct_pair_with_proper_polyA::SharedArray,
-	ct_pair_with_discarded_polyA::SharedArray,
-    fastqo_1_2_s_d::RemoteChannel{Channel{NTuple{4,String}}};
-    debug_id="None",
-    debug=false)
-
-    fastq1_b = IOBuffer()
-    fastq2_b = IOBuffer()
-    fastq_s_b = IOBuffer()
-    fastq_d_b = IOBuffer()
-    (fastq1, fastq2) = take!(fastq_pairs)
-    close(fastq1_b)
-    close(fastq2_b)
-    close(fastq_s_b)
-    close(fastq_d_b)
-    put!(fastqo_1_2_s_d,("a","b","c","d"))
-end
 
 function trim_polyA_from_fastq_pair_pararell(
         chunk_for_channels::Array{Tuple{NTuple{4,String},NTuple{4,String}},1},

@@ -24,10 +24,10 @@ MACHINE:
 ##############
 # References #
 ##############
-REFERENCE: datasets/small_dataset/references/GRCh38.primary_assembly.chr21.fa
+REFERENCE: /media/root/ocean/Databases/HUMAN/hg38/GRCh38.primary_assembly.genome_ercc.fa
 TRANSCRIPTS:
-GFF3: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gff3
-GTF: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gtf
+GFF3:
+GTF: /media/root/ocean/Databases/HUMAN/hg38/gencode.v28.primary_assembly_biotype_fix_rRNAsupl.annotation.gtf
 ###################
 # Fastqc options. #
 ###################

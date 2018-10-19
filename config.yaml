@@ -18,7 +18,7 @@ SCRATCH: tmp_small_dataset
 #########################
 MACHINE:
     threads: 24
-    threads_julia: 8
+    threads_julia: 12
     memory_java: 8
 
 ##############
