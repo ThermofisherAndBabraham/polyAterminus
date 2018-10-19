@@ -53,11 +53,10 @@ You can install  the dependencies manually or through conda environment as indic
 
 ## Analysis
 
-* Run `snakemake`:
-```bash
-    snakemake config.yaml -j 24 -k -p
+* Run `snakemake` like:
+```snakemake --configfile  config.yaml -j 24 -k -p
 ```
-
+This would ran an analysis on small dataset matching human brain RNA-seq data of 21th chromosome.
 
 ## Notes for analysis configuration `config.yaml`
 
@@ -86,3 +85,6 @@ You can install  the dependencies manually or through conda environment as indic
 - [x]  Test `rmdups()` in `MapPolyA.jl`
 - [ ]  Align all rule names and code.
 - [ ]  Add documentation.
+- [ ]  Approximate search against database of encoded polyA  stretch.
+- [ ]  Merging of R1 and R2 reads for more accurate determination of a polyA length.
+- [ ]  Speeding up the trimmer. Now with 8 processes ~ 40 minutes per sample (11 ml read pairs).
