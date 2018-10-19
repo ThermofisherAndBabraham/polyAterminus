@@ -39,8 +39,7 @@ function main(args)
         "--k", "-k"
             arg_type = Int64
             help = "Distance allowed from cluster center.
-                    With default 0 no clustering is done.
-                    Although cluster argument should be selected for TS clustering."
+                    With default 0 no clustering is done."
             dest_name = "k"
             default = 0
         "--cluster", "-c"
@@ -73,12 +72,16 @@ function main(args)
     cluster = parsed_args["cluster"]
     verbose = parsed_args["verbose"]
 
+    if parsed_args["k"] == 0:
+        cluter = false
+    end
+
     tic()
     treads, passreads, pareads, pclus, pclus2 = readbam(bam, str, k, cluster;
                                                         verbose=verbose)
     println("Parsed bam $bam: ")
     toc()
-    
+
     tic()
     statdframe = stats_poly_a(pclus)
     println("Gen dataframe: ")
