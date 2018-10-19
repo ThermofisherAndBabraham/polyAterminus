@@ -36,68 +36,77 @@ function get_polyA_prefixes_from_file(file::Any, genomeFa::Any, gff::Any;
     number_of_workers::Int64=4,
     use_cached_results::Bool=true)::FMIndexes.FMIndex{7,}
 
+    is_reference = true
     # file for caching
     if file != nothing
-        jldFile = file * "_test_exracted_polyA_prefixes.jdl"
+        jldFile = file * "_exracted_polyA_prefixes.jdl"
     elseif gff != nothing && genomeFa != nothing
         jldFile = gff * "_exracted_polyA_prefixes.jdl"
     elseif genomeFa != nothing
         jldFile = genomeFa * "_exracted_polyA_prefixes.jdl"
+    else
+        is_reference = false
     end
 
-    if !isfile(jldFile) | !use_cached_results
-        # Open files and prepare decompression stream
-        if file != nothing
-            println(STDERR,"Reading transcripts")
-            file_stream = open(file,"r")
 
-        	if file[length(file)-2:end] == ".gz"
-            	file_stream = GzipDecompressorStream(file_stream)
-        	end
-            collectedFasta = collect(FASTA.Reader(file_stream))
-            close(file_stream)
+    if is_reference
+        if (!isfile(jldFile) | !use_cached_results)
+            # Open files and prepare decompression stream
+            if file != nothing
+                println(STDERR,"Reading transcripts")
+                file_stream = open(file,"r")
 
-        elseif gff != nothing && genomeFa != nothing
-            collectedFasta = get_transcripts_from_gff(genomeFa, gff )
-        elseif genomeFa != nothing
-            println(STDERR,"Generating transcripts from genome")
-            file_stream = open(genomeFa,"r")
-            collectedFasta = collect(FASTA.Reader(file_stream))
-            close(file_stream)
+            	if file[length(file)-2:end] == ".gz"
+                	file_stream = GzipDecompressorStream(file_stream)
+            	end
+                collectedFasta = collect(FASTA.Reader(file_stream))
+                close(file_stream)
+
+            elseif gff != nothing && genomeFa != nothing
+                collectedFasta = get_transcripts_from_gff(genomeFa, gff )
+            elseif genomeFa != nothing
+                println(STDERR,"Generating transcripts from genome")
+                file_stream = open(genomeFa,"r")
+                collectedFasta = collect(FASTA.Reader(file_stream))
+                close(file_stream)
+            else
+                println(STDERR,"ERROR! Missing transcripts, gff, reference files")
+            end
+            # Start julia worker processors
+        	# Crate counter for progress nonitoring
+            counter = convert(SharedArray, zeros(Int64, nworkers()))
+        	# Arry to collect results for output
+            all_result = Array{String,1}()
+            # Parse transcripts
+            re = Regex("([ATGC]{$minimum_not_polyA})A{$minimum_polyA_length,}")
+            println(STDERR,"Collecting PolyA")
+            time = @elapsed result = @parallel  (vcat) for record in collectedFasta
+                get_polyA_prefixes(record,minimum_not_polyA,
+                                  minimum_polyA_length,re,counter)
+            end
+        	# get unique prefixes
+            all_result = unique(result)
+            number_of_unque_prefixes = length(all_result)
+            println(STDERR, "Colected $number_of_unque_prefixes unique polyA prefixes in known transcripts in $time s")
+            #prepare a concatenated string of the prefixes separated by : symbol
+            concatenated_prefixes = join(all_result,':')
+            println(length(concatenated_prefixes))
+            index = FMIndex(concatenated_prefixes, r=4)
+
+            if use_cached_results
+                save(File(format"JLD",jldFile), "index", index,compress=true)
+                println(STDERR, "FMI index of colected unique polyA prefixes in known transcripts are saved in file $jldFile")
+            end
+
         else
-            println(STDERR,"ERROR! Missing transcripts, gff, reference files")
+            println(STDERR ,"Loading FMI index of colected unique polyA prefixes in known transcriptsfrom  file $jldFile")
+            data = load(jldFile)
+            index = data["index"]
+            println(STDERR, "Loaded ....")
         end
-        # Start julia worker processors
-    	# Crate counter for progress nonitoring
-        counter = convert(SharedArray, zeros(Int64, nworkers()))
-    	# Arry to collect results for output
-        all_result = Array{String,1}()
-        # Parse transcripts
-        re = Regex("([ATGC]{$minimum_not_polyA})A{$minimum_polyA_length,}")
-        println(STDERR,"Collecting PolyA")
-        time = @elapsed result = @parallel  (vcat) for record in collectedFasta
-            get_polyA_prefixes(record,minimum_not_polyA,
-                              minimum_polyA_length,re,counter)
-        end
-    	# get unique prefixes
-        all_result = unique(result)
-        number_of_unque_prefixes = length(all_result)
-        println(STDERR, "Colected $number_of_unque_prefixes unique polyA prefixes in known transcripts in $time s")
-        #prepare a concatenated string of the prefixes separated by : symbol
-        concatenated_prefixes = join(all_result,':')
-        println(length(concatenated_prefixes))
-        index = FMIndex(concatenated_prefixes)
-
-        if use_cached_results
-            save(File(format"JLD",jldFile), "index", index,compress=true)
-            println(STDERR, "FMI index of colected unique polyA prefixes in known transcripts are saved in file $jldFile")
-        end
-
     else
-        println(STDERR ,"Loading FMI index of colected unique polyA prefixes in known transcriptsfrom  file $jldFile")
-        data = load(jldFile)
-        index = data["index"]
-        println(STDERR, "Loaded ....")
+        println(STDERR,"Analysis will be done without checking for encoded polyA ")
+        index = FMIndex(" ") #mark the situation with index of length 1
     end
     return index
 end
