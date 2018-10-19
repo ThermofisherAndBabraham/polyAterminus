@@ -14,8 +14,10 @@ module PolyAAnalysis
 
 export
     annotate_polya_sites,
+    annotate_clusters,
     check_polyA_prefixes,
     clust!,
+    cluster!,
     detect_polyA_in_a_string,
     enumeratenames!,
     extend_poly_A,
@@ -29,6 +31,7 @@ export
     readbam,
     rmdups,
     stats_poly_a,
+    stats_clusters,
     trim_polyA_3end,
     trim_polyA_file_records,
     trim_polyA_from_fastq_pair,
@@ -51,6 +54,7 @@ import GenomicFeatures: Strand
 import StringDistances: Levenshtein, evaluate
 import TranscodingStreams
 import FMIndexes: FMIndexes
+import StatsBase: nquantile
 
 
 include("AnnotatePolyA.jl")
