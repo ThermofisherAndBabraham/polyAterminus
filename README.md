@@ -1,6 +1,9 @@
-## Description
+# PolyATerminus
+[![Latest documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://polya-terminus.s3-eu-central-1.amazonaws.com/index.html)
 
-Purpose of the work flow is to run RNA-seq trimming and alignment to a given reference steps and perform initial polyadenylation sites' analysis.
+## Description
+Purpose of the work flow is to run RNA-seq trimming and alignment to a given
+reference steps and perform initial polyadenylation sites' analysis.
 
 ## Dependencies
 
@@ -12,7 +15,9 @@ Purpose of the work flow is to run RNA-seq trimming and alignment to a given ref
 * `sambamba 0.6.6`
 
 
-You can install  the dependencies manually or through conda environment as indicated below. If you choose to install the required software  manually please directly to the step 6 of the Workflow setup.
+You can install  the dependencies manually or through conda environment as
+indicated below. If you choose to install the required software  manually
+please directly to the step 6 of the Workflow setup.
 
 ## Workflow setup
 
