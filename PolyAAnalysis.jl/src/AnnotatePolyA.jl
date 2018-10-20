@@ -509,26 +509,37 @@ function check_adj_values!(d1::Dict, ck::Array{Int64,1}, new_center::Int64,
             if verbose
                 println(STDOUT, "FOUND VALUE TO BE MORE ADJ TO $new_center RATHER THEN $adj_cluster_id: $position")
                 println(STDOUT, ck)
-                println(STDOUT, d1[adj_cluster_id])
+
+                try
+                    println(STDOUT, d1[adj_cluster_id])
+                catch
+                    KeyError(adj_cluster_id)
+                    println(STDERR, "$adj_cluster_id WAS ALREADY REMOVED.")
+                end
             end
 
             # sometimes keys are deleted in recursion
-            if position in keys(d1[adj_cluster_id])
-                val = values(d1[adj_cluster_id][position])
-                if verbose
-                    println(STDOUT, "!!! DELETE $position in $adj_cluster_id")
-                    println(STDOUT, "AND PUSH IT FOR RECURSION.")
-                end
+            if adj_cluster_id in keys(d1)
+                if position in keys(d1[adj_cluster_id])
+                    val = values(d1[adj_cluster_id][position])
+                    if verbose
+                        println(STDOUT, "!!! DELETE $position in $adj_cluster_id")
+                        println(STDOUT, "AND PUSH IT FOR RECURSION.")
+                    end
 
-                delete!(d1[adj_cluster_id], position)
-                cluster!(d1, chr, position, val, str, k; verbose=verbose)
+                    delete!(d1[adj_cluster_id], position)
+                    cluster!(d1, chr, position, val, str, k; verbose=verbose)
 
-                if verbose
-                    println(STDOUT, "RETURNED FROM CLUSTER RECURSION1")
+                    if verbose
+                        println(STDOUT, "RETURNED FROM CLUSTER RECURSION1")
+                    end
+
+                elseif verbose
+                    println(STDOUT, "POSITION $position WAS ALREADY REMOVED.")
                 end
 
             elseif verbose
-                println(STDOUT, "POSITION $position WAS ALREADY REMOVED.")
+                println(STDOUT, "CLUSTER CENTER $adj_cluster_id WAS ALREADY REMOVED.")
             end
         end
     end
