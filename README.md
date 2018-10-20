@@ -49,19 +49,21 @@ please directly to the step 6 of the Workflow setup.
 
 5. Activate created environment:
 ```bash
-   source activate 3EndD
+    source activate 3EndD
 ```
 
 6. Install the required julia packages:
 ```bash
-   bash envs/build_julia_pkgs.sh
+    bash envs/build_julia_pkgs.sh
 ```
 
 ## Analysis
 
 * Run `snakemake` like:
-```snakemake --configfile  config.yaml -j 24 -k -p
+```bash
+    snakemake --configfile  config.yaml -j 24 -k -p
 ```
+
 This would ran an analysis on small dataset matching human brain RNA-seq data of 21th chromosome.
 
 ## Notes for analysis configuration `config.yaml`
