@@ -127,10 +127,9 @@ function main(args)
                                              verbose=verbose)
         println("Annotated polyA clusters in: ")
         toc()
+        CSV.write(parsed_args["outfile"]*"_annotated_polyA_clusters.bed", joinedcollection,
+                  delim='\t', header=false)
     end
-
-    CSV.write(parsed_args["outfile"]*"_annotated_polyA_clusters.bed", joinedcollection,
-              delim='\t', header=false)
 
 end
 

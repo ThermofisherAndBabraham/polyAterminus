@@ -147,12 +147,12 @@ function cluster!(d::Dict, chr::String, pos::Int64, l::Array{Int64,1},
             d[chr*"::"*string(pos)*"::"*str] = Dict(pos => l)
             search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                               chr, str, k; verbose=verbose)
-            @goto stop_cluster!
+            return d
         else
             d[chr*"::"*string(pos)*"::"*str] = Dict(pos => vcat([1], l))
             search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                               chr, str, k; verbose=verbose)
-            @goto stop_cluster!
+            return d
         end
     end
 
@@ -204,13 +204,13 @@ function cluster!(d::Dict, chr::String, pos::Int64, l::Array{Int64,1},
                     d[chr*"::"*string(pos)*"::"*str] = Dict(pos => l)
                     search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                                       chr, str, k; verbose=verbose)
-                    @goto stop_cluster!
+                    return d
 
                 else
                     d[chr*"::"*string(pos)*"::"*str] = Dict(pos => vcat([1], l))
                     search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                                       chr, str, k; verbose=verbose)
-                    @goto stop_cluster!
+                    return d
                 end
             end
         end
@@ -245,8 +245,6 @@ function cluster!(d::Dict, chr::String, pos::Int64, l::Array{Int64,1},
         end
     end
 
-    @label stop_cluster!
-
     return d
 end
 
@@ -263,7 +261,8 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
         if verbose
             println(STDOUT, "CENTER NOT FOUND, MUST HAVE CHANGED IN RECURSION: $center_pos")
         end
-        @goto stop_recenter!
+
+        return d1
     end
 
     new_center = 0
@@ -365,10 +364,12 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
             d1[new_cluster_id] = d1[near_center]
             delete!(d1, near_center)
             recenter!(d1, d1[new_cluster_id], new_cluster_id, k, chr, str; verbose=verbose)
-            @goto stop_recenter!
+
+            return d1
+
         else
-            recenter!(d1, d1[near_center], near_center, k, chr, str; verbose=verbose)
-            @goto stop_recenter!
+
+            return d1
         end
     end
 
@@ -425,8 +426,6 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
         println(STDOUT, "NEW CENTER WAS NOT FOUND.")
     end
 
-    @label stop_recenter!
-
     return d1
 end
 
@@ -434,67 +433,130 @@ end
 function search_adj_clust!(d1, new_center::Int64, new_cluster_id::String,
                            chr::String, str::String, k::Int64; verbose=false)
 
-        # search for adjacent clusters
-        for adj_center in new_center-k*2:new_center+k*2
-            adj_cluster_id = chr*"::"*string(adj_center)*"::"str
+    # new cluster id might change from recursion.
+    if !(new_cluster_id in keys(d1))
+        return d1
+    end
 
-            # new cluster id might change from recursion.
-            if !(new_cluster_id in keys(d1))
-                break
+    found_adj_clusters = String[]
+    distancies = Int64[]
+    adj_centers = Int64[]
+    found::Bool = false
+    adj_cluster_id = ""
+    adj_center = -1
+
+    # search for adjacent clusters
+    for adj_center in new_center-k*2:new_center+k*2
+
+        adj_cluster_id = chr*"::"*string(adj_center)*"::"str
+
+        if adj_cluster_id != new_cluster_id && adj_cluster_id in keys(d1)
+            if verbose
+                println(STDOUT, "FOUND ADJ CLUSTER IN +/- 2*$k RANGE: $adj_cluster_id near $new_cluster_id")
+                println(STDOUT, "$adj_cluster_id:")
             end
 
-            if adj_cluster_id != new_cluster_id && adj_cluster_id in keys(d1)
-                if verbose
-                    println(STDOUT, "FOUND ADJ CLUSTER IN +/- 2*$k RANGE: $adj_cluster_id near $new_cluster_id")
-                    println(STDOUT, "$adj_cluster_id:")
-                end
+            push!(found_adj_clusters, adj_cluster_id)
+            push!(distancies, abs(new_center - adj_center))
+            push!(adj_centers, adj_center)
+            found = true
+        end
+    end
 
-                ck = collect(keys(d1[adj_cluster_id]))
-                ck2 = collect(keys(d1[new_cluster_id]))
-                min = minimum(ck)
-                max = maximum(ck)
+    if !found
+        return d1
+    end
 
-                if verbose
-                    println(STDOUT, d1[adj_cluster_id])
-                    println(STDOUT, ck)
-                end
+    # search wich is more adjacent
+    minv = 2*k+1
+    ct = 0
 
-                # if found cluster falls in new cluster - add and check center
-                # with recursion.
-                if min in new_center-k:new_center+k && max in new_center-k:new_center+k
-                    if verbose
-                        println(STDOUT, "FOUND CLUSTER FALLS IN: $adj_cluster_id --> $new_cluster_id")
-                        println(STDOUT, "RECENTERING WITH NEW CLUSTER ID: $new_cluster_id")
-                    end
+    for i in distancies
+        ct += 1
+        if i < minv
+            minv = i
+            adj_cluster_id = found_adj_clusters[ct]
+            adj_center = adj_centers[ct]
 
-                    recenter!(d1, d1[adj_cluster_id], new_cluster_id, k, chr, str; verbose=verbose)
+            if verbose
+                println(STDOUT, "ADJ CLUSTER FOUND TO BE: ", found_adj_clusters[ct])
+            end
 
-                    if verbose
-                        println(STDOUT, "RETURNED FROM RECENTER RECURSION: $new_cluster_id")
-                    end
+        elseif i == minv
+            if verbose
+                println(STDOUT, "POSITION TO BE IN THE MIDLE OF 2 ADJ CLUSTERS: ",
+                        chr*"::"*string(new_center - i)*"::"*"str",
+                        " --> ",
+                        chr*"::"*string(new_center)*"::"*"str",
+                        " <-- ",
+                        chr*"::"*string(i + new_center)*"::"*"str"
+                        )
+            end
 
-                # if whole cluster does not fall, still some
-                # values might be more adjacent to either cluster center
-                else
-                    if verbose
-                        println(STDOUT, "FOUND CLUSTER DID NOT FALL IN: $adj_cluster_id --> $new_cluster_id")
-                        println(STDOUT, "CHECKING IF ANY VALUES ARE MORE ADJACENT.")
-                    end
+            # try to decide by weight of cluster.
+            weight1 = 0
+            for x in keys(d1[chr*"::"*string(new_center-i)*"::"*str])
+                weight1 += d1[chr*"::"*string(new_center-i)*"::"*str][x][1]
+            end
 
-                    check_adj_values!(d1, ck, new_center, adj_center,
-                                      adj_cluster_id, chr, str,
-                                      k; verbose=verbose)
+            weight2 = 0
+            for x in keys(d1[chr*"::"*string(new_center+i)*"::"*str])
+                weight2 += d1[chr*"::"*string(new_center+i)*"::"*str][x][1]
+            end
 
-                    check_adj_values!(d1, ck2, adj_center, new_center,
-                                      new_cluster_id, chr, str,
-                                      k; verbose=verbose)
-
-                    if verbose
-                        println(STDOUT, "FINISHED CHECKING ADJ VALUES.")
-                    end
-                end
+            if weight1 > weight2
+                adj_cluster_id  = chr*"::"*string(new_center-i)*"::"*str
+            elseif weight2 > weight1
+                adj_cluster_id  = chr*"::"*string(new_center+i)*"::"*str
             end
         end
+    end
+
+
+    ck = collect(keys(d1[adj_cluster_id]))
+    ck2 = collect(keys(d1[new_cluster_id]))
+    min = minimum(ck)
+    max = maximum(ck)
+
+    if verbose
+        println(STDOUT, d1[adj_cluster_id])
+        println(STDOUT, ck)
+    end
+
+    # if found cluster falls in new cluster - add and check center
+    # with recursion.
+    if min in new_center-k:new_center+k && max in new_center-k:new_center+k
+        if verbose
+            println(STDOUT, "FOUND CLUSTER FALLS IN: $adj_cluster_id --> $new_cluster_id")
+            println(STDOUT, "RECENTERING WITH NEW CLUSTER ID: $new_cluster_id")
+        end
+
+        recenter!(d1, d1[adj_cluster_id], new_cluster_id, k, chr, str; verbose=verbose)
+
+        if verbose
+            println(STDOUT, "RETURNED FROM RECENTER RECURSION: $new_cluster_id")
+        end
+
+    # if whole cluster does not fall, still some
+    # values might be more adjacent to either cluster center
+    else
+        if verbose
+            println(STDOUT, "FOUND CLUSTER DID NOT FALL IN: $adj_cluster_id --> $new_cluster_id")
+            println(STDOUT, "CHECKING IF ANY VALUES ARE MORE ADJACENT.")
+        end
+
+        check_adj_values!(d1, ck, new_center, adj_center,
+                          adj_cluster_id, chr, str,
+                          k; verbose=verbose)
+
+        check_adj_values!(d1, ck2, adj_center, new_center,
+                          new_cluster_id, chr, str,
+                          k; verbose=verbose)
+
+        if verbose
+            println(STDOUT, "FINISHED CHECKING ADJ VALUES.")
+        end
+    end
 
     return d1
 end
@@ -651,6 +713,7 @@ function parseGFF3(gff3file::String)::Dict{String, IntervalCollection{String}}
 
     return intcol
 end
+
 
 """
     get_split_key(chr::String, x::Int64, y::Int64; step::Int64=10000)
@@ -1031,7 +1094,6 @@ function annotate_clusters(a::DataFrame, b::Dict{String, IntervalCollection{Stri
 
     return df
 end
-
 
 
 """
