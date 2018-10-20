@@ -147,12 +147,12 @@ function cluster!(d::Dict, chr::String, pos::Int64, l::Array{Int64,1},
             d[chr*"::"*string(pos)*"::"*str] = Dict(pos => l)
             search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                               chr, str, k; verbose=verbose)
-            @goto stop_cluster!
+            return d
         else
             d[chr*"::"*string(pos)*"::"*str] = Dict(pos => vcat([1], l))
             search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                               chr, str, k; verbose=verbose)
-            @goto stop_cluster!
+            return d
         end
     end
 
@@ -204,13 +204,13 @@ function cluster!(d::Dict, chr::String, pos::Int64, l::Array{Int64,1},
                     d[chr*"::"*string(pos)*"::"*str] = Dict(pos => l)
                     search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                                       chr, str, k; verbose=verbose)
-                    @goto stop_cluster!
+                    return d
 
                 else
                     d[chr*"::"*string(pos)*"::"*str] = Dict(pos => vcat([1], l))
                     search_adj_clust!(d, pos, chr*"::"*string(pos)*"::"*str,
                                       chr, str, k; verbose=verbose)
-                    @goto stop_cluster!
+                    return d
                 end
             end
         end
@@ -245,8 +245,6 @@ function cluster!(d::Dict, chr::String, pos::Int64, l::Array{Int64,1},
         end
     end
 
-    @label stop_cluster!
-
     return d
 end
 
@@ -263,7 +261,8 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
         if verbose
             println(STDOUT, "CENTER NOT FOUND, MUST HAVE CHANGED IN RECURSION: $center_pos")
         end
-        @goto stop_recenter!
+
+        return d1
     end
 
     new_center = 0
@@ -365,10 +364,12 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
             d1[new_cluster_id] = d1[near_center]
             delete!(d1, near_center)
             recenter!(d1, d1[new_cluster_id], new_cluster_id, k, chr, str; verbose=verbose)
-            @goto stop_recenter!
+
+            return d1
         else
             recenter!(d1, d1[near_center], near_center, k, chr, str; verbose=verbose)
-            @goto stop_recenter!
+
+            return d1
         end
     end
 
@@ -424,8 +425,6 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
     if verbose && !found_new_center
         println(STDOUT, "NEW CENTER WAS NOT FOUND.")
     end
-
-    @label stop_recenter!
 
     return d1
 end
