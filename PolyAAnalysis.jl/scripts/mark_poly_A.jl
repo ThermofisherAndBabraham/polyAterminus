@@ -197,10 +197,10 @@ function monitor(
 
     elapsed_time = convert(Int64,Dates.value(end_time-start_time))
     speed = round(((finished-finished_first)/elapsed_time*1000),2)
-    print(STDERR, "In total parsed reads: ",finished," ; ","at average speed $speed read pairs/s ; ",
+    print(STDOUT, "In total parsed reads: ",finished," ; ","at average speed $speed read pairs/s ; ",
     " without polyA: ",sum(ct_pair_without_polyA)," ; ",
     " with proper polyA: ",sum(ct_pair_with_proper_polyA)," ; ",
-    " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"\n")
+    " with discarded polyA: ",sum(ct_pair_with_discarded_polyA),"                      \n")
     final_monitoring_message[1] = 1
 end
 
