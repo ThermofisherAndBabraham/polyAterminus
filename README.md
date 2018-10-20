@@ -25,7 +25,7 @@ please directly to the step 6 of the Workflow setup.
 ```bash
    wget -P miniconda https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh &&
    chmod 755 ./miniconda/Miniconda3-latest-Linux-x86_64.sh &&
-   ./miniconda/Miniconda3-latest-Linux-x86_64.sh &&
+   ./miniconda/Miniconda3-latest-Linux-x86_64.sh
 ```
 
 2. Add path of `miniconda` to `.bashrc` if not selected option to add automatically during installation:
@@ -93,3 +93,4 @@ This would ran an analysis on small dataset matching human brain RNA-seq data of
 - [ ]  Approximate search against database of encoded polyA  stretch.
 - [ ]  Merging of R1 and R2 reads for more accurate determination of a polyA length.
 - [ ]  Speeding up the trimmer. Now with 8 processes ~ 40 minutes per sample (11 ml read pairs).
+- [ ]  Consider other clustering algorithms.
