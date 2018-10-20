@@ -366,8 +366,8 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
             recenter!(d1, d1[new_cluster_id], new_cluster_id, k, chr, str; verbose=verbose)
 
             return d1
+
         else
-            # recenter!(d1, d1[near_center], near_center, k, chr, str; verbose=verbose)
 
             return d1
         end
@@ -713,6 +713,7 @@ function parseGFF3(gff3file::String)::Dict{String, IntervalCollection{String}}
 
     return intcol
 end
+
 
 """
     get_split_key(chr::String, x::Int64, y::Int64; step::Int64=10000)
@@ -1093,7 +1094,6 @@ function annotate_clusters(a::DataFrame, b::Dict{String, IntervalCollection{Stri
 
     return df
 end
-
 
 
 """
