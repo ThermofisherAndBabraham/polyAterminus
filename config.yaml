@@ -70,5 +70,6 @@ MAPPING:
 # Annotation of TS #
 ####################
 ANNOTATE-TS:
-    k: 5
+    k: 10
+    m: 1
     additional_params: "--cluster" # ["--cluster --verbose"]
