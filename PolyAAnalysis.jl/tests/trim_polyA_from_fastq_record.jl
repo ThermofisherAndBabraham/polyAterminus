@@ -38,7 +38,7 @@ for (seq,trimmed,len) in [
     q_trimmed=fill(20,length(trimmed))
     fq=FASTQ.Record("testing_seq",description,seq,q)
     fq_trimmed=FASTQ.Record("$len:A:testing_seq",description,trimmed,q_trimmed)
-    output_fastq = trim_polyA_from_fastq_record(fq,20,10,4,debug=true)
+    output_fastq = trim_polyA_from_fastq_record(fq,20,10,4,debug=false)
     output_fastq_record=output_fastq[1]
     #println("KuKu",output_fastq[2]," ",output_fastq[3]," ")
     @test FASTQ.sequence(output_fastq_record)  == FASTQ.sequence(fq_trimmed)

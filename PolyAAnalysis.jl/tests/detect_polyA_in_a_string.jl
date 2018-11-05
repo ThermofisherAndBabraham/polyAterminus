@@ -13,34 +13,34 @@ min_l = Int64(minimum_polyA_length / 2)
 re = Regex("(A+[GTC])?(A{$min_l,})([GTC]A+)?")
 
 seq = "AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT"
-@test !detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test !detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "GAATGTATGGTAGGAATGTATTCTCTTGTAGGAATGTAAATCTGTATTAAAAGGGGGTCCAAGCCAGGCCCCCAGGTCTTCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAA"
-@test detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT"
-@test detect_polyA_in_a_string(seq,10,3,re,debug=true)
+@test detect_polyA_in_a_string(seq,10,3,re,debug=false)
 
 seq = "AGAGAATTACAAATCAGAAGGGGAAGATTGACTGTTTAATAAAATGTGCTGGGAATCAATGGCAAATATACAATAAAATAAAATTATATTTTTATTCATATTATACCCCAAATAAATTTCAGATATACATAAAACCCAAAGTAAAATATT"
-@test !detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test !detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "TCAAAAAAATAATATGGTAATAATAATAAAAGCAGTGCCCAGAGAACAAGGCTTGTTGGCTGTTCCACCCCAGGGGGCCCCTTGCACAGGCGGTGCCATCTCTGCCTCCCAAAGCTCTAAGAGCCACTGTCCCCCATCCCAAGAGA"
-@test !detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test !detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "TCAAAAAAATAATATGGTAATAATAATAAAAGCAGTGCCCAGAGAACAAGGCTTGTTGGCTGTTCCACCCCAGGGGGCCCCTTGCACAGGCGGTGCCATCTCTGCCTCCCAAAGCTCTAAGAGCCACTGTCCCCCATCCCAAGAGA"
-@test !detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test !detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "GGGGCGCGGCGGCGCGGGGGGGGAAAAAAAAACCCCCCCCCCCCCCCGGGGGGCCCC"
-@test !detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test !detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "GGGGCGCGGCGGCGCGGGGGGGGAAAATAAAAACCCCCCCCCCCCCCCGGGGGGCCCC"
-@test detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "AAGAAAAAAACAAACAACCCCATCAAAAAGTGGGCAAAGGATATAAATAGACAC"
-@test detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "TCAGGAGATCGAGACCATCCTGGCTAACATGGTGAAACCCCGTCTCTACTAAAAATAACAAAAAAAAA"
-@test detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "TGTGTGTGTGTGTGGTAAAAAAAAAAGT"
 @test detect_polyA_in_a_string(seq,10,1,re,maximum_search_fragment_length=20)
@@ -64,7 +64,7 @@ seq = "TGTGTGTGTGTGTGGAATAAAAAAAAATAA"
 @test detect_polyA_in_a_string(seq,10,1,re,maximum_search_fragment_length=20)
 
 seq = "AAAAAAAAAAAAAAAAAAAATGGAACGCAGGGCAGGAACTCGTATTTGGGGGGAGATGGG"
-@test detect_polyA_in_a_string(seq,10,1,re,debug=true)
+@test detect_polyA_in_a_string(seq,10,1,re,debug=false)
 
 seq = "TGTGTGTGTGTGTGGAAAAAAAAAT"
 @test !detect_polyA_in_a_string(seq,10,1,re,maximum_search_fragment_length=20)
