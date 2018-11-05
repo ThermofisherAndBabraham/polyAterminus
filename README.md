@@ -59,40 +59,50 @@ please directly to the step 6 of the Workflow setup.
 
 ## Analysis
 
-* Run `snakemake` like:
+* Run `snakemake` as follows:
 ```bash
     snakemake --configfile  config.yaml -j 24 -k -p
 ```
 
-This would ran an analysis on small dataset matching human brain RNA-seq data of 21th chromosome.
+This would ran an analysis on a small dataset matching human brain RNA-seq data of 21th chromosome.
 
 ## Notes for analysis configuration `config.yaml`
 
-* `threads`: consider is as how many parallel programs should be running on your PC.
-* `memory_java`: for human 60 GB is recommended.
-* `threads_julia`: usually no more than 8.
-* `threads_star`: max as you wish.
-* `SCRATCH`: location of tmp directory for faster computation (SSD).
-* `REFERENCE`: genome in fasta format.
-* `GFF3` and `GTF`: should be the same version.
+* Configuration of your working environment:
+```yaml
+    threads: consider it as how many parallel programs should be running on your PC.
+    memory_java: for human 60 GB is recommended.
+    threads_julia: specify threads for `julia`. Usually no more then 8. Some scripts scales only reading GZ | BAM files.
+    threads_star: specify threads for `STAR` aligner.
+    SCRATCH: location of tmp directory for faster computation (SSD).
+    REFERENCE: genome in fasta format.
+    GFF3: annotation files, should be the same version.
+    GTF: annotation files, should be the same version.
+    TRANSCRIPTS: Optional, generated from fasta and annotations if not provided.
+```
 
 * If you want to normalize all samples by lowest read number found:
-`SUBSAMPLING:`
-    `run: true`
+```yaml
+    SUBSAMPLING:
+        run: true
+```
+
 * If you want to subsample to specific read number:
-`SUBSAMPLING:`
-    `run: true`
-    `subsample_to: N`
+```yaml
+    SUBSAMPLING:
+        run: true
+        subsample_to: N
+```
 
-## TODO
-
-- [x]  `output`: should be correct output for all necessary files.
-- [x]  `environment`: all applications should be added.
-- [x]  Tests for `MapPolyA.jl`
-- [x]  Check strands after parsing Bam in `MapPolyA.jl`
-- [x]  Test `rmdups()` in `MapPolyA.jl`
-- [x]  Add documentation.
-- [ ]  Approximate search against database of encoded polyA  stretch.
-- [ ]  Merging of R1 and R2 reads for more accurate determination of a polyA length.
-- [ ]  Speeding up the trimmer. Now with 8 processes ~ 40 minutes per sample (11 ml read pairs).
-- [ ]  Consider other clustering algorithms.
+* Additional parameters which are not listed in config can be passed as a string for BBDUK,
+STAR and PolyA annotator programs.
+```yaml
+    additional_params: "passed as a string for specified programs."
+```
+* Specific parameters for polyA | termination sites annotator:
+```yaml
+    ANNOTATE-TS:
+        k: distance from the cluster center allowed.
+        m: minimum distance between clusters allowed. Two adjacent clusters with distance <= m will be merged.
+        additional_params: pass -c|--cluster to run clustering, pass -v|--verbose to print proceeding of clustering.
+```
