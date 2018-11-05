@@ -36,7 +36,8 @@ export
     trim_polyA_file_records,
     trim_polyA_from_fastq_pair,
     trim_polyA_from_fastq_record,
-    trim_polyA_from_fastq_pair_pararell
+    trim_polyA_from_fastq_pair_pararell,
+    merge_adj_clusters!
 
 import BioAlignments: BAM
 import BioSequences: BioSymbols, @dna_str, FASTA, reverse_complement!, sequence

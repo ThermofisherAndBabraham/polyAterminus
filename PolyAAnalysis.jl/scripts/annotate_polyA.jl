@@ -10,8 +10,10 @@ using PolyAAnalysis
 
 function main(args)
     arg_parse_settings = ArgParseSettings(description = "Finds mapping positions of polyA sites, annotations and writes tsv and bed files.
-                                                        Presumptions: 1) SE reads is used for alignment; 2) Reads were trimmed with 3EndD
-                                                        PolyAAnalysis trimmer which adds tags to the read names.")
+                                                        Presumptions: 1) SE reads is used for alignment; 2) Reads were trimmed with PolyATerminus
+                                                        PolyAAnalysis trimmer which adds tags to the read names. 3) Reads are sorted.
+                                                        If cluster option is selected -> cluster is defined by  <= k distance from center and
+                                                        > m distance between clusters.")
     @add_arg_table arg_parse_settings begin
         "--bam", "-b"
             arg_type = String
@@ -42,6 +44,12 @@ function main(args)
                     With default 0 no clustering is done."
             dest_name = "k"
             default = 0
+        "--m", "-m"
+            arg_type = Int64
+            help = "Minimum distance between clusters.
+                    With default 0 merge of two adjacent clusters is not done."
+            dest_name = "m"
+            default = 0
         "--cluster", "-c"
             arg_type = Bool
             help = "Do clustering."
@@ -69,6 +77,7 @@ function main(args)
     bam = parsed_args["bam"]
     str = parsed_args["strandness"]
     k = parsed_args["k"]
+    m = parsed_args["m"]
     cluster = parsed_args["cluster"]
     verbose = parsed_args["verbose"]
 
@@ -89,6 +98,9 @@ function main(args)
 
     if cluster
         tic()
+        if m != 0
+            merge_adj_clusters!(pclus2, m; verbose=verbose)
+        end
         statdframe2 = stats_clusters(pclus2)
         println("Gen dataframe from cluster: ")
         statdframe2[:Smaple] = basename(bam)
