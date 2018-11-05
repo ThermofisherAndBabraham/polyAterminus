@@ -100,7 +100,9 @@ and sorted.
            -s {strandness}
            -c {cluster}
            -k {k}
+           -m {m}
    ```
-Where `k` parameter is distance from cluster centre allowed. With `k=0` no
-clustering is done. Clustering is based on centre value which is
-either most frequent termination site or if frequencies are equal central value.
+Where `k` parameter is distance from cluster centre allowed and `m` parameter is
+minimum distance between clusters allowed. With `k=0` or `m=0` no clustering
+is done. Clustering is based on centre value which is either most frequent
+termination site or if frequencies are equal central value.

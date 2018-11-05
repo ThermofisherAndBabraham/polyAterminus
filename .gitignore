@@ -35,6 +35,8 @@ output*/*
 tmp*/*
 benchmarks/*
 *STAR_annotation*
+Log.out
+*.fai
 
 # jupyter notebook files #
 ##########################

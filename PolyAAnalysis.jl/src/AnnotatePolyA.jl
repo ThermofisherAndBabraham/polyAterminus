@@ -81,28 +81,11 @@ end
 
     Function adds new termination site (TS) to a given dataset by searching most
     adjacent clusters and if needed correcting clusters to meat definition of
-    +/-k from center.
-    Algorithm:
-        1. Search for a cluster center.
-        2. If !found - add new cluster of one.
-        3. Else
-            3.1. Add value to the cluster
-            3.2. Check center
-                3.2.1 If !changed - return
-                    3.2.1.1 Check adjacent clusters, comapare values.
-                    3.2.1.2 Recenter recursively if needed.
-                3.2.2. If changed
-                    3.2.2.1. Recenter
-                    3.2.2.2. Check if all values holds in
-                        3.2.2.2.1. If holds in - return
-                        3.2.2.2.2. Else drop those values
-                                   and call function recursively.
-                    3.2.2.3 Check adjacent clusters, comapare values.
-                    3.2.2.4 Recenter recursively if needed.
+    +/-k from the center.
 
     # Arguments
-    - `d::Dict`: a collection of clusters where key is combination of chromosome
-       mapping position.
+    - `d::Dict`: a collection of clusters where key is defined by chromosome,
+       mapping position and strand.
     - `chr::String`: Chromosome.
     - `pos::Int64`: Mapping position of TS.
     - `l::Array{Int64,1}`: Lengths of detected PolyA. First values is count.
@@ -335,7 +318,7 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
     if found_new_center
         new_cluster_id = chr*"::"*string(new_center)*"::"*str
     else
-        # for checking adjecent clusters even if new center not found.
+        # for checking adjacent clusters even if new center not found.
         new_cluster_id = near_center
         new_center = center_pos
     end
@@ -607,6 +590,222 @@ function check_adj_values!(d1::Dict, ck::Array{Int64,1}, new_center::Int64,
     end
 
     return d1
+end
+
+
+"""
+    merge_adj_clusters!(d::Dict, m::Int64; verbose=false)::Dict
+    Searches for adj clusters with <= m distance and merge.
+    # Arguments
+    - `d::Dict`: a collection of clusters where key is defined by chromosome,
+       mapping position and strand.
+    - `m::Int64`: a min distance allowed between adjacent cluster values.
+    - `verbose::Bool=false`: print clustering proceeding to STDOUT.
+"""
+function merge_adj_clusters!(d::Dict, m=Int64; verbose::Bool=false)::Dict
+
+    chroms = Dict()
+
+    # collect and sort centers
+    for center in collect(keys(d))
+        csplit = split(center,"::")
+        chr = csplit[1]
+        center_pos = parse(Int64,csplit[2])
+        str = csplit[3]
+        if chr*"::"*str in keys(chroms)
+            chroms[chr*"::"*str] = push!(chroms[chr*"::"*str], center_pos)
+            sort!(chroms[chr*"::"*str])
+        else
+            chroms[chr*"::"*str] =  [center_pos]
+        end
+    end
+
+    # check distancies between clusters and merge if <= m
+    for cs in keys(chroms)
+        csplit = split(cs,"::")
+        chr = csplit[1]
+        str = csplit[2]
+        ct = 1
+
+        for idx in 1:length(chroms[cs])
+
+            if length(chroms[cs]) == ct
+                break
+            end
+
+            center_pos = chroms[cs][ct]
+            positions = collect(keys(d[chr*"::"*string(center_pos)*"::"str]))
+            right = maximum(positions)
+
+            # check next adj center min value
+            positions2 = collect(keys(d[chr*"::"*string(chroms[cs][ct+1])*"::"str]))
+            left = minimum(positions2)
+
+            if left - right <= m
+                if verbose
+                    println(STDOUT, "")
+                    println(STDOUT, "FOUND TWO ADJ CLUSTERS .... WITH DISTANCE <= $m .... ")
+                    println(STDOUT, "MERGING $chr::",chroms[cs][ct+1],"::$str WITH $chr::$center_pos::$str .... ")
+                end
+
+                temp_cluster::Dict = merge(d[chr*"::"*string(center_pos)*"::"str],
+                                           d[chr*"::"*string(chroms[cs][ct+1])*"::"str])
+
+                new_center_pos = 0
+                most_fp = Int64[]
+                most_fv = 0
+                ct2 = 0
+                all_c = Int64[]
+
+                # get most frequent positions
+                for k in keys(temp_cluster)
+                    push!(all_c, k)
+                    if temp_cluster[k][1] > most_fv
+                        most_fp = Int64[]
+                        most_fv = temp_cluster[k][1]
+                        push!(most_fp, k)
+
+                    elseif temp_cluster[k][1] == most_fv
+                        push!(most_fp, k)
+                    end
+                end
+
+                if verbose
+                    println(STDOUT, "MOST FREQUENT POSITIONS IN A MERGED CUSTER:")
+                    println(STDOUT, "$most_fp")
+                end
+
+                # search for new center
+                if length(most_fp) > 1
+                    med = median(all_c)
+                    most_fp_m = most_fp .- med
+                    unqs = unique(most_fp_m)
+                    l = length(most_fp_m)
+
+                    if unqs == l
+                        imin = indmin(most_fp_m)
+                        new_center_pos = most_fp[imin]
+
+                        if verbose
+                            println(STDOUT, "UNIQUE: ", most_fp[imin])
+                        end
+
+                    else
+                        if verbose
+                            println(STDOUT, "NO UNIQUE CENTERS FOUND .... ")
+                            println(STDOUT, "SELECTING MEDIAN POSITION ....")
+                        end
+
+                        new_center_pos = trunc(Int64, round(med, 0))
+
+                        # if median is non existing position
+                        if length(find(all_c .== new_center_pos)) == 0
+                            if verbose
+                                println(STDOUT, "MEDIAN POSITION IS EMPTY ....")
+                                println(STDOUT, "SELECTING MOST WEIGHTED CENTER ....")
+                            end
+
+                            # get sizes of original clusters
+                            # center will be of most weighted cluster
+                            size1 = cluster_size(d[chr*"::"*string(center_pos)*"::"str])
+                            size2 = cluster_size(d[chr*"::"*string(chroms[cs][ct+1])*"::"str])
+
+                            if size1 > size2
+                                if verbose
+                                    println(STDOUT, "FOUND WEIGHTED NEW CENTER: $center_pos ....")
+                                end
+                                new_center_pos = center_pos
+
+                            elseif size2 > size1
+                                if verbose
+                                    println(STDOUT, "FOUND WEIGHTED NEW CENTER: ", chroms[cs][ct+1], " ....")
+                                end
+                                new_center_pos = chroms[cs][ct+1]
+
+                            else
+                                if verbose
+                                    println(STDOUT, "NO WEIGHTED CENTER FOUND ....")
+                                end
+
+                                if new_center_pos%2 == 0
+                                    if verbose
+                                        println(STDOUT, "SELECTED $center_pos ....")
+                                    end
+                                    new_center_pos = center_pos
+
+                                else
+                                    if verbose
+                                        println(STDOUT, "SELECTED ", chroms[cs][ct+1], " ....")
+                                    end
+                                    new_center_pos = chroms[cs][ct+1]
+                                end
+                            end
+                        end
+                    end
+
+                else
+                    new_center_pos = most_fp[1]
+                end
+
+                new_center = chr*"::"*string(new_center_pos)*"::"*str
+                if verbose
+                    println(STDOUT, "MERGED NEW CLUSTER ID: $new_center ....")
+                end
+
+                delete!(d, chr*"::"*string(center_pos)*"::"str)
+                if verbose
+                    println(STDOUT, "REMOVED FIRST PREVIOUS CLUSTER: $chr::$center_pos::str ....")
+                end
+
+                delete!(d, chr*"::"*string(chroms[cs][ct+1])*"::"str)
+                if verbose
+                    println(STDOUT, "REMOVED SECOND PREVIOUS CLUSTER: ", chr*"::"*string(chroms[cs][ct+1])*"::"str, " ....")
+                end
+
+                d[new_center] = temp_cluster
+                if verbose
+                    println(STDOUT, "REMOVING CENTER FROM CHROMS STRUCTURE: ", chroms[cs][ct], " ....")
+                end
+                deleteat!(chroms[cs], ct)
+
+                if verbose
+                    println(STDOUT, "REMOVING CENTER FROM CHROMS STRUCTURE: ", chroms[cs][ct], " ....")
+                end
+                deleteat!(chroms[cs], ct)
+
+                if verbose
+                    println(STDOUT, "ADDING NEW CENTER TO CHROMS STRUCTURE: $new_center_pos ....")
+                end
+                push!(chroms[cs], new_center_pos)
+
+
+                if verbose
+                    println(STDOUT, "SORTING CHROMS STRUCTURE: ....")
+                end
+                sort!(chroms[cs])
+
+            else
+                if verbose
+                    println(STDOUT, "NO ADJ CLUSTER FOUND TO $chr::$center_pos::$str")
+                end
+                ct += 1
+            end
+        end
+    end
+
+    return d
+end
+
+
+function cluster_size(d::Dict)::Int64
+
+    size = 0
+
+    for k in keys(d)
+        size += d[k][1]
+    end
+
+    return size
 end
 
 
