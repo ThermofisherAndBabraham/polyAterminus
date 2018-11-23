@@ -45,7 +45,6 @@ function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbo
             # skip not primary aligned, supplementary alignment.
             if (flag&256 == 0) && (flag&2048 == 0) && iftrue
                 spl = split(BAM.tempname(record),":")
-
                 passreads += 1
 
                 if flag&16 == 0
@@ -77,7 +76,6 @@ function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbo
                         println(STDERR, "TOTAL PRIMARY, POLYA, MALFORMATED READS: $passreads $pareads $mal_reads")
                     end
                 end
-
             end
         end
     end
