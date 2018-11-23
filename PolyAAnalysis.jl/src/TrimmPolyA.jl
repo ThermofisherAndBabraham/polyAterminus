@@ -265,7 +265,13 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
     seq,trimmed_to_polyA = trim_polyA_3end(seq_ini,minimum_poly_A_between)
     seq_len = length(seq)
     name = FASTQ.identifier(fq)
-    description = FASTQ.description(fq)
+
+    if FASTQ.hasdescription(fq)
+        description = FASTQ.description(fq)
+    else
+        description = nothing
+    end
+
     quality = FASTQ.quality(fq)[1:seq_len]
     i = seq_len
     polyA_start = 0
@@ -346,8 +352,13 @@ function trim_polyA_from_fastq_record(fq::FASTQ.Record,
         not_poly_a_seq = seq[1:polyA_start-1]
         nname = string(polyA_length) * ":A:" * name
         nquality = quality[1:polyA_start-1]
-        #fqo=FastqRead(nname, dna(not_poly_a_seq), strand, nquality)
-        fqo = FASTQ.Record(nname, description, not_poly_a_seq, nquality)
+
+        if description != nothing
+            fqo = FASTQ.Record(nname, description, not_poly_a_seq, nquality)
+        else
+            fqo = FASTQ.Record(nname, not_poly_a_seq, nquality)
+        end
+
         has_proper_polyA = true
     end
 
@@ -571,10 +582,22 @@ function trim_polyA_from_fastq_pair_pararell(
 
                     if include_polyA
                         name = FASTQ.identifier(fqo_trimmed)
-                        description = FASTQ.description(fqo_trimmed)
+
+                        if FASTQ.hasdescription(fqo_trimmed)
+                            description = FASTQ.description(fqo_trimmed)
+                        else
+                            description = nothing
+                        end
+
                         rev_quality = reverse(FASTQ.quality(fqo_trimmed))
                         rev_seq = reverse_complement!(FASTQ.sequence(fqo_trimmed))
-                        fqo_trimmed_rev = FASTQ.Record(name, description, rev_seq, rev_quality)
+
+                        if description != nothing
+                            fqo_trimmed_rev = FASTQ.Record(name, description, rev_seq, rev_quality)
+                        else
+                            fqo_trimmed_rev = FASTQ.Record(name, rev_seq, rev_quality)
+                        end
+
                         println(fastq1_b,fqo_trimmed)
                         println(fastq2_b,fqo_trimmed_rev)
                     end
