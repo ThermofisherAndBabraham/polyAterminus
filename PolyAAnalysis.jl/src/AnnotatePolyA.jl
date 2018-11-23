@@ -10,6 +10,7 @@ function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbo
     pareads = Int64(0)
     pclus = Dict{String,Array{Int16,1}}()
     pclus2 = Dict()
+    mal_reads = Int64(0)
 
     if !(strandness in ["+" "-"])
         println(STDERR, "ERROR: provided srandness is not correct: $strandness, [+/-].")
@@ -45,6 +46,8 @@ function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbo
             if (flag&256 == 0) && (flag&2048 == 0) && iftrue
                 spl = split(BAM.tempname(record),":")
 
+                passreads += 1
+
                 if flag&16 == 0
                     strness = "+"
                     pos = BAM.rightposition(record)
@@ -55,18 +58,26 @@ function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbo
                     strness = "."
                 end
 
-                if spl[2] == "A" && strness != "."
-                    pareads += 1
-                    cps = rfname * "::" * string(pos) * "::" * strness
-                    pclus = clust!(pclus, cps, parse(Int16, spl[1]))
+                if length(spl) > 1
+                    if spl[2] == "A" && strness != "."
+                        pareads += 1
+                        cps = rfname * "::" * string(pos) * "::" * strness
+                        pclus = clust!(pclus, cps, parse(Int16, spl[1]))
 
-                    if cluster
-                        pclus2 = cluster!(pclus2, rfname, pos, [parse(Int64, spl[1])],
-                                          strness, k; verbose=verbose)
+                        if cluster
+                            pclus2 = cluster!(pclus2, rfname, pos, [parse(Int64, spl[1])],
+                                              strness, k; verbose=verbose)
+                        end
+                    end
+
+                else
+                    mal_reads += 1
+                    if verbose
+                        println(STDERR, "WARNING: READ NAME is NOT FORMATED PROPERLY: ", BAM.tempname(record))
+                        println(STDERR, "TOTAL PRIMARY, POLYA, MALFORMATED READS: $passreads $pareads $mal_reads")
                     end
                 end
 
-                passreads += 1
             end
         end
     end
