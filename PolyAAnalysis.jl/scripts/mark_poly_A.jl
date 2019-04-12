@@ -1,9 +1,8 @@
 #!/usr/bin/env julia
 
-#= Custom library =#
-using ArgParse.ArgParseSettings    #=                                    =#
-using ArgParse.@add_arg_table      #= For parsing command-line options   =#
-using ArgParse.parse_args          #=                                    =#
+using ArgParse.ArgParseSettings
+using ArgParse.@add_arg_table
+using ArgParse.parse_args   
 using CodecZlib
 using IterTools
 using JLD, HDF5

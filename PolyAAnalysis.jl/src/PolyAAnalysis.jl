@@ -5,7 +5,6 @@
 #
 # A julia package for the representation and manipulation of biological sequences.
 #
-# This file is a part of BioJulia.
 # License is MIT: https://github.com/BioJulia/BioSequences.jl/blob/master/LICENSE.md
 
 __precompile__()
