@@ -12,6 +12,7 @@ INPUT-DIR: datasets/small_dataset/small_fastqs
 TMP-DIR: tmp_small_dataset
 OUT-DIR: output_small_dataset
 SCRATCH: tmp_small_dataset
+BENCHMARKS: benchmarks
 
 #########################
 # CPU and memory params #
@@ -20,6 +21,7 @@ MACHINE:
     threads: 24
     threads_julia: 12
     memory_java: 8
+    threads_sambamba: 8
 
 ##############
 # References #
