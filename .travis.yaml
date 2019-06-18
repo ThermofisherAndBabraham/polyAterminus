@@ -1,6 +1,6 @@
 language: julia
 julia:
-  - 0.6.1
+  - "0.6.1"
 install:
   - sudo apt-get update
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -19,5 +19,3 @@ script:
   - source activate 3EndD
   - bash envs/build_julia_pkgs.sh
   - julia PolyAAnalysis.jl/tests/runtests.jl
-codecov: true
-coveralls: true
