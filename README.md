@@ -66,6 +66,14 @@ please directly to the step 6 of the Workflow setup.
 
 This would ran an analysis on a small dataset matching human brain RNA-seq data of 21th chromosome.
 
+## PolyAAnalysis tests
+
+* Run `julia`:
+```bash
+    source activate 3EndD;
+    julia PolyAAnalysis.jl/tests/runtests.jl
+```
+
 ## Notes for analysis configuration `config.yaml`
 
 * Configuration of your working environment:
@@ -74,6 +82,7 @@ This would ran an analysis on a small dataset matching human brain RNA-seq data 
     memory_java: for human 60 GB is recommended.
     threads_julia: specify threads for `julia`. Usually no more then 8. Some scripts scales only reading GZ | BAM files.
     threads_star: specify threads for `STAR` aligner.
+    threads_sambamba: specify threads for sambamba tools.
     SCRATCH: location of tmp directory for faster computation (SSD).
     REFERENCE: genome in fasta format.
     GFF3: annotation files, should be the same version.
