@@ -1,5 +1,6 @@
 # PolyATerminus
 [![Latest documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://polya-terminus.s3-eu-central-1.amazonaws.com/index.html)
+https://travis-ci.com/ThermofisherAndBabraham/polyAterminus.svg?branch=master
 
 ## Description
 Purpose of the work flow is to run RNA-seq trimming and alignment to a given
