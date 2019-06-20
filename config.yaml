@@ -9,6 +9,8 @@
 ########################################
 
 INPUT-DIR: datasets/small_dataset/small_fastqs
+SAMPLES: HBR_100_Collibri_chr21small_A
+LANE-REGEX: "L\\d\\d\\d_"
 TMP-DIR: tmp_small_dataset
 OUT-DIR: output_small_dataset
 SCRATCH: tmp_small_dataset
@@ -18,7 +20,6 @@ BENCHMARKS: benchmarks
 # CPU and memory params #
 #########################
 MACHINE:
-    threads: 24
     threads_julia: 12
     memory_java: 8
     threads_sambamba: 8
@@ -56,6 +57,7 @@ BBDUK:
 # Subsampling #
 ###############
 SUBSAMPLING:
+    threads: 4
     run: False
     subsample_to:
 
@@ -72,6 +74,7 @@ MAPPING:
 # Annotation of TS #
 ####################
 ANNOTATE-TS:
+    threads: 1
     k: 10
     m: 1
     additional_params: "--cluster" # ["--cluster --verbose"]

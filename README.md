@@ -79,7 +79,9 @@ This would ran an analysis on a small dataset matching human brain RNA-seq data 
 
 * Configuration of your working environment:
 ```yaml
-    threads: consider it as how many parallel programs should be running on your PC.
+    INPUT-DIR: dir with fastq.gz files
+    SAMPLES: sample names. Use if there is a need to merge fastq files by lanes. If none, all fastq files from INPUT-DIR will be selected. eg. SAMPLE1_
+    LANE-REGEX: python regex for finding sample files split by lanes. eg. use "L\\d\\d\\d_" to find any SAMPLE1_R[1,2]_L00[1,2,3]_001.fastq.gz in INPUT-DIR/lanes/.
     memory_java: for human 60 GB is recommended.
     threads_julia: specify threads for `julia`. Usually no more then 8. Some scripts scales only reading GZ | BAM files.
     threads_star: specify threads for `STAR` aligner.
