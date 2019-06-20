@@ -173,9 +173,6 @@ def PolyAAnalysis_trimm_input(wildcards):
 
     else:
         input = [
-            tmp + "/" + wildcards.stem + "_R1_001subs.fastq.gz",
-            tmp + "/" + wildcards.stem + "_R2_001subs.fastq.gz",
-            # to avoid deleting temp if no subsampling, because of links.
             tmp + "/" + wildcards.stem + "_R1_001Trimmed.fastq.gz",
             tmp + "/" + wildcards.stem + "_R2_001Trimmed.fastq.gz"
         ]
