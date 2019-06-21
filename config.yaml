@@ -21,7 +21,7 @@ BENCHMARKS: benchmarks
 #########################
 MACHINE:
     threads_julia: 12
-    memory_java: 8
+    memory_java: 4
     threads_sambamba: 8
 
 ##############
