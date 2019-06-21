@@ -22,3 +22,4 @@ script:
  - source activate 3EndD;
  - bash envs/build_julia_pkgs.sh;
  - julia PolyAAnalysis.jl/tests/runtests.jl;
+ - snakemake --use-conda -j 2 -p

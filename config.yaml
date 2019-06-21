@@ -27,10 +27,10 @@ MACHINE:
 ##############
 # References #
 ##############
-REFERENCE: datasets/small_dataset/references/GRCh38.primary_assembly.chr21.fa
+REFERENCE: datasets/small_dataset/references/GRCh38.primary_assembly.chr21_reduced.fa
 TRANSCRIPTS:
-GFF3: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gff3
-GTF: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gtf
+GFF3: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21_reduced.gff3
+GTF: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21_reduced.gtf
 ###################
 # Fastqc options. #
 ###################
