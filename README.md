@@ -118,3 +118,58 @@ STAR and PolyA annotator programs.
         m: minimum distance between clusters allowed. Two adjacent clusters with distance <= m will be merged.
         additional_params: pass -c|--cluster to run clustering, pass -v|--verbose to print proceeding of clustering.
 ```
+
+## Annotated BED files for termination sites
+
+Workflow generates annotated transcription termination sites in `ANNOTATE-POLYA` directory.
+
+For `*annotated_polyA_clusters.bed` files:
+
+| Column Nr | Field Name         | Explanation |
+| --------- | ------------------ | ----------- |
+| 1         | Chr                | Chromosome  |
+| 2         | Start              | Start (0-based) |
+| 3         | End                | End |
+| 4         | GeneName           | Gene Name |
+| 5         | ClusterSize        | Detected number of reads representing this termination site. |
+| 6         | Strand             | Strand |
+| 7         | Feature            | Feature |
+| 8         | ClusterCenter      | Position of cluster center. 1-based. |
+| 9         | Biotype            | Biotype |
+| 10        | ClusterMedian      | Median of frequencies of reads representing each termination site in cluster. |
+| 11        | ClusterMean        | Mean of frequencies of reads representing each termination site in cluster. |
+| 12        | ClusterMin         | Min of frequencies of reads representing each termination site in cluster. |
+| 13        | ClusterMax         | Max of frequencies of reads representing each termination site in cluster. |
+| 14        | Cluster1stQuartile | 1st quartile of frequencies of reads representing each termination site in cluster. |
+| 15        | Cluster3rdQuartile | 3rd quartile of frequencies of reads representing each termination site in cluster. |
+| 16        | TSMedian           | Median length polyA tail. |
+| 17        | TSMean             | Mean length polyA tail. |
+| 18        | TSMin              | Min length polyA tail. |
+| 19        | TSMax              | Max length polyA tail. |
+| 20        | TS1stQuartile      | 1st quartile of lengths of polyA tail. |
+| 21        | TS3rdQuartile      | 3rd quartile of lengths of polyA tail. |
+
+In addition for `*annotated_polyA_clusters_plus_coverage.bed` files
+
+| Column Nr | Field Name         | Explanation |
+| --------- | ------------------ | ----------- |
+| 22        | - | Sambamba added Read count at Chr:Start-End |
+| 23        | - | Sambamba added mean coverage at Chr:Start-End |
+| 24        | - | Sambamba added Sample Name if any. |
+
+
+For `*annotated_polyA.bed` files:
+
+| Column Nr | Field Name         | Explanation |
+| --------- | ------------------ | ----------- |
+| 1         | Chr                | Chromosome |
+| 2         | Start              | Start (0-based) |
+| 3         | End                | End |
+| 4         | GeneName           | Gene Name |
+| 5         | Count              | Detected number of reads representing this termination site. |
+| 6         | Strand             | Strand |
+| 7         | Feature            | Feature |
+| 8         | Median             | Median length polyA tail. |
+| 9         | Min                | Min length polyA tail. |
+| 10        | Max                | Max length polyA tail. |
+| 11        | Biotype            | Biotype |
