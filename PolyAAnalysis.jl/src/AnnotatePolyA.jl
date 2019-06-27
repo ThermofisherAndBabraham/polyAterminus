@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 
 
-function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbose=false)
+function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; mappingquality=0, verbose=false)
 
     reader = open(BAM.Reader, bam)
     record = BAM.Record()
@@ -23,6 +23,7 @@ function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbo
         if BAM.ismapped(record)
             rfname::String = BAM.refname(record)
             flag = BAM.flag(record)
+            mapq = BAM.mappingquality(record)
             treads += 1
 
             iftrue::Bool = false
@@ -43,7 +44,7 @@ function readbam(bam::String, strandness::String, k::Int64, cluster::Bool; verbo
             end
 
             # skip not primary aligned, supplementary alignment.
-            if (flag&256 == 0) && (flag&2048 == 0) && iftrue
+            if mapq > mappingquality && (flag&256 == 0) && (flag&2048 == 0) && iftrue
                 spl = split(BAM.tempname(record),":")
                 passreads += 1
 
@@ -1143,9 +1144,9 @@ function annotate_polya_sites(a::IntervalCollection,
                     ct += 1
 
                     if strand(i1) == Strand('-')
-                        push!(dfn, [seqname(i1) it1 it2 gn c str ft me mi mx bt])
+                        push!(dfn, [seqname(i1) it1-1 it2 gn c str ft me mi mx bt])
                     else
-                        push!(dfp, [seqname(i1) it1 it2 gn c str ft me mi mx bt])
+                        push!(dfp, [seqname(i1) it1-1 it2 gn c str ft me mi mx bt])
                     end
                 end
             end
@@ -1163,7 +1164,7 @@ function annotate_polya_sites(a::IntervalCollection,
             gn = "NA"
             bt = "NA"
 
-            push!(dfna, [seqname(i1) first(i1) last(i1) gn c str ft me mi mx bt])
+            push!(dfna, [seqname(i1) first(i1)-1 last(i1) gn c str ft me mi mx bt])
         end
     end
 
@@ -1247,13 +1248,13 @@ function annotate_clusters(a::DataFrame, b::Dict{String, IntervalCollection{Stri
                         ct += 1
 
                         if str == "-"
-                            push!(dfn, hcat([chr it1 it2 gn c str ft center bt],
+                            push!(dfn, hcat([chr it1-1 it2 gn c str ft center bt],
                                             [i1[7] i1[8] i1[9] i1[10] i1[11]],
                                             [i1[12] i1[13] i1[14] i1[15] i1[16]],
                                             [i1[17] i1[18]]))
 
                         else
-                            push!(dfp, hcat([chr it1 it2 gn c str ft center bt],
+                            push!(dfp, hcat([chr it1-1 it2 gn c str ft center bt],
                                             [i1[7] i1[8] i1[9] i1[10] i1[11]],
                                             [i1[12] i1[13] i1[14] i1[15] i1[16]],
                                             [i1[17] i1[18]]))
@@ -1279,7 +1280,7 @@ function annotate_clusters(a::DataFrame, b::Dict{String, IntervalCollection{Stri
             gn = "NA"
             bt = "NA"
 
-            push!(dfna, hcat([chr it1 it2 gn c str ft center bt],
+            push!(dfna, hcat([chr it1-1 it2 gn c str ft center bt],
                             [i1[7] i1[8] i1[9] i1[10] i1[11]],
                             [i1[12] i1[13] i1[14] i1[15] i1[16]],
                             [i1[17] i1[18]]))

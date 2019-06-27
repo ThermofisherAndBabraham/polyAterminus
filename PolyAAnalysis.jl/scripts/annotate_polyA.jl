@@ -55,6 +55,12 @@ function main(args)
             help = "Do clustering."
             dest_name = "cluster"
             action = :store_true
+        "--q", "-q"
+            arg_type = Int64
+            help = "Mapping quality of a read. Only greater than provided mapping
+                    quality will be considered as correctly aligned read."
+            dest_name = "mapq"
+            default = 0
         "--verbose", "-v"
             arg_type = Bool
             help = "Verbose for clustering."
@@ -78,6 +84,7 @@ function main(args)
     str = parsed_args["strandness"]
     k = parsed_args["k"]
     m = parsed_args["m"]
+    mapq = parsed_args["mapq"]
     cluster = parsed_args["cluster"]
     verbose = parsed_args["verbose"]
 
@@ -87,6 +94,7 @@ function main(args)
 
     tic()
     treads, passreads, pareads, pclus, pclus2 = readbam(bam, str, k, cluster;
+                                                        mappingquality=mapq,
                                                         verbose=verbose)
     println("Parsed bam $bam: ")
     toc()

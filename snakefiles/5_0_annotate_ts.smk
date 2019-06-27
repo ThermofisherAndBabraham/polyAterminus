@@ -20,11 +20,14 @@ rule PolyAAnalysis_annotate:
         pref = OUT + "/ANNOTATE-POLYA/{stem}",
         k = CONFIG["ANNOTATE-TS"]["k"],
         m = CONFIG["ANNOTATE-TS"]["m"],
+        q = CONFIG["ANNOTATE-TS"]["mappingquality"],
+        s = CONFIG["ANNOTATE-TS"]["strandness"],
         add_params = CONFIG["ANNOTATE-TS"]["additional_params"]
     shell:
         "export JULIA_NUM_THREADS={threads}; julia --depwarn=no " +
         "PolyAAnalysis.jl/scripts/annotate_polyA.jl -b {input} -o {params.pref} " +
-        "-g {params.gff} -k {params.k} -m {params.m} {params.add_params} &> {log}"
+        "-g {params.gff} -k {params.k} -m {params.m} -q {params.q} " +
+        "-s {params.s} {params.add_params} &> {log}"
 
 rule sambamba_depth_region:
     input:
@@ -37,6 +40,9 @@ rule sambamba_depth_region:
         LOGS + "/SAMBAMBA/depth_{stem}.log"
     threads:
         SAMBAMBA_THREADS
+    params:
+        q = CONFIG["ANNOTATE-TS"]["mappingquality"],
     shell:
-        "sambamba depth region -t {threads} -L {input[1]} " +
+        "sambamba depth region -F 'mapping_quality > {params.q}' " +
+        "-t {threads} -L {input[1]} " +
         "{input[0]} | sed '/^#/ d' > {output}"
