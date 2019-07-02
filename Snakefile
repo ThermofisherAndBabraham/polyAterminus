@@ -17,8 +17,11 @@ include: "./snakefiles/0_1_configuration.smk"
 include: "./snakefiles/1_0_download.smk"
 include: "./snakefiles/2_0_fastqc.smk"
 include: "./snakefiles/3_0_processing.smk"
+#include: "./snakefiles/3_0_trim_adapter_trim_galore.smk"
 include: "./snakefiles/3_1_trimming_polyA.smk"
-include: "./snakefiles/4_0_alignment.smk"
+#include: "./snakefiles/3_1_trim_galore_polyA.smk"
+#include: "./snakefiles/4_0_alignment.smk"
+include: "./snakefiles/4_0_alignment_hisat2.smk"
 include: "./snakefiles/5_0_annotate_ts.smk"
 
 init_log()
