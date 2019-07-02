@@ -27,10 +27,15 @@ MACHINE:
 ##############
 # References #
 ##############
-REFERENCE: datasets/small_dataset/references/GRCh38.primary_assembly.chr21_reduced.fa
+#REFERENCE: datasets/small_dataset/references/GRCh38.primary_assembly.chr21_reduced.fa
+REFERENCE: datasets/small_dataset/references/GRCh38.primary_assembly.chr21.fa
 TRANSCRIPTS:
-GFF3: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21_reduced.gff3
-GTF: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21_reduced.gtf
+#GFF3: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21_reduced.gff3
+#GTF: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21_reduced.gtf
+GFF3: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gff3
+GTF: datasets/small_dataset/references/gencode.v28.primary_assembly.annotation_chr21.gtf
+HISAT2_SPLICES: datasets/small_dataset/references/Homo_sapiens.GRCh38.78.hisat2_splices.txt
+HISAT2_GENOME: datasets/small_dataset/references/GRCh38_hisat
 ###################
 # Fastqc options. #
 ###################
