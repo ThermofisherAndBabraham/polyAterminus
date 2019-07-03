@@ -7,6 +7,8 @@ import yaml
 if not config:
     with open("config.yaml") as stream:
         CONFIG = yaml.load(stream)
+else:
+    CONFIG = config
 
 if len(CONFIG["SAMPLES"]) == 0:
     STEMS = get_stems(CONFIG["INPUT-DIR"])
