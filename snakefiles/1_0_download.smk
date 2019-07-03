@@ -1,7 +1,16 @@
 
 # ------------------------ Download  ---------------------------------------- #
 
+
+rule clone_slimfastq:
+    output:
+        "dependencies/slimfastq/slimfastq"
+    run:
+        install_slimfastq()
+
 rule generate_script_for_merging_files:
+    input:
+        "dependencies/slimfastq/slimfastq"
     output:
         tmp + "/{stem}R1_input_list.sh",
         tmp + "/{stem}R2_input_list.sh"

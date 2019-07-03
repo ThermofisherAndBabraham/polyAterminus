@@ -26,17 +26,43 @@ def init_log():
         sys.exit()
 
 
-def get_stems(input_dir):
-    stems = []
-    for root, dirnames, filenames in os.walk(input_dir):
-        for f in filenames:
-            if f.find(".fastq.gz") > -1 or f.find(".fq.gz") > -1:
-                f = f.replace("_R1_001.fastq.gz", "")
-                f = f.replace("_R2_001.fastq.gz", "")
-                f = f.replace("1.fq.gz", "")
-                f = f.replace("2.fq.gz", "")
-                stems.append(f)
-    return(list(set(stems)))
+def install_slimfastq():
+
+    try:
+        subprocess.call(['dependencies/slimfastq/slimfastq', '-h'], stdout = subprocess.DEVNULL)
+    except:
+        if not os.path.exists('dependencies'):
+            os.mkdir('dependencies')
+
+        wlogger.info(f'slimfastq was not found in dependencies. Pulling.]')
+        p = subprocess.Popen('cd dependencies; ' +
+                              'git clone https://github.com/Infinidat/slimfastq.git; ' +
+                              'cd slimfastq ' +
+                              'git checkout v1.032 && make; ' +
+                              'cd ../../snakefiles',
+                              stdout=subprocess.PIPE,
+                              shell=True
+                              )
+        p_status = p.wait()
+        (p_out, p_err) = p.communicate()
+        wlogger.info(f'slimfastq was not found in dependencies. Pulling. DONE]')
+        if p_status == 0:
+            logger.info(f'slimfastq installed to dependencies: {p_out}')
+        else:
+            logger.error(f'Installing slimfastq exited with 0: {p_err}')
+
+    return True
+
+
+def shstring(l, sfq):
+    slimfq = 'dependencies/slimfastq/slimfastq '
+    out = ''
+    for i in l:
+        if i.endswith('.sfq') and sfq:
+            out = out + slimfq + i + ' | gzip -f; \n'
+        else:
+            out = out + "cat " + i + "; \n"
+    return out
 
 
 def get_sample_files_named_pipe_script(sample, debug=True):
@@ -48,17 +74,21 @@ def get_sample_files_named_pipe_script(sample, debug=True):
     r2_stems = []
     r1_testlist = []
     r2_testlist = []
+    sfq = False
+
 
     for root, dirnames, filenames in os.walk(input_dir):
         for f in filenames:
-            if ((f.endswith(".fastq.gz") or f.endswith(".fq.gz"))
+            if ((f.endswith(".fastq.gz") or f.endswith(".fq.gz") or f.endswith(".sfq"))
                     and f.find(sample) > -1):
+                if f.find(".sfq") > -1:
+                    sfq = True
 
                 lane_splits = re.split(CONFIG["LANE-REGEX"], f)
                 wlogger.info(f'File name split by LANE-REGEX to: [{lane_splits}]')
 
                 if (f.find("_R1_") > -1 or f.endswith("_1.fq.gz")
-                        or f.endswith("_1.fastq.gz")):
+                        or f.endswith("_1.fastq.gz") or f.endswith("_1.sfq")):
 
                     if debug:
                         wlogger.info(f'Found R1 file: [{root}, {f}]')
@@ -81,7 +111,7 @@ def get_sample_files_named_pipe_script(sample, debug=True):
                     r1_stems.append(stem)
 
                 elif (f.find("_R2_") > -1 or f.endswith("_2.fq.gz")
-                        or f.endswith("_2.fastq.gz")):
+                        or f.endswith("_2.fastq.gz") or f.endswith("_2.sfq")):
 
                     if debug:
                         wlogger.info(f'Found R2 file: [{root}, {f}]')
@@ -143,20 +173,13 @@ def get_sample_files_named_pipe_script(sample, debug=True):
 
     f1 = open(r1ft, 'w')
 
-    def shstring(l):
-        out = ''
-        for i in l:
-            out = out + "cat " + i + "; \n"
-
-        return out
-
     wlogger.info(f'Writting {sample} R1 list of found files for `cat`: [{r1_files}]')
-    f1.write(shstring(r1_files))
+    f1.write(shstring(r1_files, sfq))
     f1.close()
     os.system('chmod a+x %s' % (r1ft))
 
     f2 = open(r2ft, 'w')
-    out = shstring(r2_files)
+    out = shstring(r2_files, sfq)
     wlogger.info(f'Writting {sample} R2 list of found files for `cat`: [{r2_files}]')
     f2.write(out)
     f2.close()
@@ -178,3 +201,10 @@ def PolyAAnalysis_trimm_input(wildcards):
         ]
 
     return input
+
+
+def get_annotate_ts_strandedness(wildcards):
+
+    for i in CONFIG["ANNOTATE-TS"]["strandedness"].keys():
+        if i == wildcards.stem:
+            return CONFIG["ANNOTATE-TS"]["strandedness"][i]

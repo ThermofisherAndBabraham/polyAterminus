@@ -21,7 +21,7 @@ rule PolyAAnalysis_annotate:
         k = CONFIG["ANNOTATE-TS"]["k"],
         m = CONFIG["ANNOTATE-TS"]["m"],
         q = CONFIG["ANNOTATE-TS"]["mappingquality"],
-        s = CONFIG["ANNOTATE-TS"]["strandness"],
+        s = get_annotate_ts_strandedness,
         add_params = CONFIG["ANNOTATE-TS"]["additional_params"]
     shell:
         "export JULIA_NUM_THREADS={threads}; julia --depwarn=no " +

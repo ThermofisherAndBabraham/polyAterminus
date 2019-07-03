@@ -79,9 +79,9 @@ This would ran an analysis on a small dataset matching human brain RNA-seq data 
 
 * Configuration of your working environment:
 ```yaml
-    INPUT-DIR: dir with fastq.gz files
-    SAMPLES: sample names. Use if there is a need to merge fastq files by lanes. If none, all fastq files from INPUT-DIR will be selected. eg. SAMPLE1_ SAMPLE2_
-    LANE-REGEX: python regex for finding sample files split by lanes. eg. use "L\\d\\d\\d_" to find any SAMPLE1_R[1,2]_L00[1,2,3]_001.fastq.gz SAMPLE2_R[1,2]_L00[1,2,3]_001.fastq.gz  in INPUT-DIR/lanes/. Sample names should be unique.
+    INPUT-DIR: dir with fastq files
+    SAMPLES: sample names, part of a file name. See example bellow.   
+    LANE-REGEX: python regex for finding same sample files split by lanes. eg. use "L\\d\\d\\d_" to find any SAMPLE1_R[1,2]_L00[1,2,3]_001.fastq.gz SAMPLE2_R[1,2]_L00[1,2,3]_001.fastq.gz  in INPUT-DIR. Sample names should be unique.
     memory_java: for human 60 GB is recommended.
     threads_julia: specify threads for `julia`. Usually no more then 8. Some scripts scales only reading GZ | BAM files.
     threads_star: specify threads for `STAR` aligner.
@@ -91,6 +91,29 @@ This would ran an analysis on a small dataset matching human brain RNA-seq data 
     GFF3: annotation files, should be the same version.
     GTF: annotation files, should be the same version.
     TRANSCRIPTS: Optional, generated from fasta and annotations if not provided.
+```
+
+* Supported file names:
+```bash
+    SAMPLE1_L001_R1_001.fastq.gz
+    SAMPLE1_L001_R2_001.fastq.gz
+```
+```bash
+    SAMPLE1_L001_1.fq.gz
+    SAMPLE1_L001_2.fq.gz
+```
+```bash
+    SAMPLE1_L001_R1_001.sfq
+    SAMPLE1_L001_R2_001.sfq
+```
+```bash
+    SAMPLE1_L001_1.sfq
+    SAMPLE1_L001_1.sfq
+```
+SAMPLES and LANE-REGEX options in your config would be:
+```yaml
+    SAMPLES: SAMPLE1
+    LANE-REGEX: "L\\d\\d\\d_"
 ```
 
 * If you want to normalize all samples by lowest read number found:
@@ -117,6 +140,9 @@ STAR and PolyA annotator programs.
         k: distance from the cluster center allowed.
         m: minimum distance between clusters allowed. Two adjacent clusters with distance <= m will be merged.
         additional_params: pass -c|--cluster to run clustering, pass -v|--verbose to print proceeding of clustering.
+        mappingquality: Only reads with greater than this mapping value will pass.
+        strandedness:   List your SAMPLES bellow providing for each strandedness.
+            HBR_100_Collibri_chr21small_A: If R1 read is the same as a gene sequence: "+". If R2 read is the same as a gene sequence: "-"
 ```
 
 ## Annotated BED files for termination sites

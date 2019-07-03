@@ -11,7 +11,7 @@ else:
     CONFIG = config
 
 if len(CONFIG["SAMPLES"]) == 0:
-    STEMS = get_stems(CONFIG["INPUT-DIR"])
+    sys.exit('No samples provided in your CONFIG.')
 else:
     STEMS = CONFIG["SAMPLES"].split()
 
