@@ -78,6 +78,6 @@ ANNOTATE-TS:
     k: 10
     m: 1
     mappingquality: 0              # [0] Only reads with greater than this mapping value will pass.
-    strandedness:                    # [+] If R1 read is the same as a gene sequence: +; If R2 read is the same as a gene sequence: -;
-        HBR_100_Collibri_chr21small_A: "+"
+    strandedness:                  # List your SAMPLES and provide strandedness.
+        HBR_100_Collibri_chr21small_A: "+" # [+] If R1 read is the same as a gene sequence: +; If R2 read is the same as a gene sequence: -;
     additional_params: "--cluster" # ["--cluster --verbose"]

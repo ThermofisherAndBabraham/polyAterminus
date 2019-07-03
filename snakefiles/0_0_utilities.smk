@@ -207,4 +207,5 @@ def get_annotate_ts_strandedness(wildcards):
 
     for i in CONFIG["ANNOTATE-TS"]["strandedness"].keys():
         if i == wildcards.stem:
+            wlogger.info(f'Set strandedness: {wildcards.stem}: {CONFIG["ANNOTATE-TS"]["strandedness"][i]}')
             return CONFIG["ANNOTATE-TS"]["strandedness"][i]
