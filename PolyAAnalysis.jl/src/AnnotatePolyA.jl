@@ -314,8 +314,13 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
             diff = abs(center_pos - med)
         end
 
+        if verbose
+            println(STDOUT, "MEDIAN POSITION IN A CLUSTER: $med")
+        end
+
         for i in equals
             if abs(i - med) < diff
+                diff = abs(i - med)
                 new_center = i
                 found_new_center = true
                 if verbose
@@ -355,11 +360,16 @@ function recenter!(d1::Dict, d2::Dict, near_center::String, k::Int64,
 
         if found_new_center
             d1[new_cluster_id] = d1[near_center]
+            if verbose
+                println(STDOUT, "DELETING $near_center from d1.")
+            end
             delete!(d1, near_center)
+            if verbose
+                println(STDOUT, "RECENTERING RECURSIVELY with $new_cluster_id.")
+            end
             recenter!(d1, d1[new_cluster_id], new_cluster_id, k, chr, str; verbose=verbose)
 
             return d1
-
         else
 
             return d1
