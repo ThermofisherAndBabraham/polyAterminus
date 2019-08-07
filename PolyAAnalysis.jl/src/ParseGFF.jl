@@ -76,11 +76,11 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1
     end
 
     toc()
-    println(STDERR,"Dublicated transcripts count in gff = ",ct)
-    println(STDERR,"Number of transcripts in gff = ",num)
+    println(STDOUT,"Dublicated transcripts count in gff = ",ct)
+    println(STDOUT,"Number of transcripts in gff = ",num)
     close(reader)
 
-    println(STDERR,"Collecting sequences from ref genome using data from GFF")
+    println(STDOUT,"Collecting sequences from ref genome using data from GFF")
     tic()
     # Read ref genome FASTA File and optains transcripts sequences
     file_stream = open(fa,"r")
@@ -89,6 +89,7 @@ function get_transcripts_from_gff(fa::String, gff::String)::Array{FASTA.Record,1
     end
     toc()
     close(file_stream)
+
     return result
 end
 
@@ -122,16 +123,24 @@ function get_transcripts_from_dict(record::FASTA.Record,
                 coords = split(coords, "-")
                 coor1 = parse(Int, coords[1])
                 coor2 = parse(Int, coords[2])
-                transseq = transseq * FASTA.sequence(record,coor1:coor2)
+                try
+                    transseq = transseq * FASTA.sequence(record,coor1:coor2)
+                catch error
+                    println(STDERR, "ERROR! $error")
+                    continue
+                end
             end
             # If strand - makes reverse complement
             if strand == "-"
                 transseq = reverse_complement!(transseq)
             end
-            push!(outrecords, FASTA.Record("Seq", transseq))
+            if !(transseq == dna"")
+                push!(outrecords, FASTA.Record("Seq", transseq))
+            end
         end
     else
-        println(STDERR,"ERROR! Chromosome '",chr, "' is not in Gff file.")
+        println(STDERR,"ERROR! Chromosome '",chr, "' is not in GFF file.")
     end
+
     return outrecords
 end
