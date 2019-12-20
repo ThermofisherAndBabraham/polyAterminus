@@ -47,3 +47,11 @@ Log.out
 # Build #
 #########
 PolyAAnalysis.jl/docs/build*
+
+# local scripts and files #
+###########################
+move_to_new_folder.sh
+workflow_notes.txt
+output_tests/*
+Snakefile_all_options
+ 
